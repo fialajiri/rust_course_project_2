@@ -1,0 +1,9 @@
+[package]
+edition = "2021"
+name = "chat-server"
+version = "0.1.0"
+
+[dependencies]
+chat-common = {path = "../chat-common"}
+clap = {version = "4.0", features = ["derive"]}
+serde_cbor = "0.11"

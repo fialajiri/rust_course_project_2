@@ -1,0 +1,11 @@
+[package]
+edition = "2021"
+name = "chat-client"
+version = "0.1.0"
+
+[dependencies]
+chat-common = {path = "../chat-common"}
+chrono = "0.4"
+clap = {version = "4.0", features = ["derive"]}
+image = "0.24"
+serde_cbor = "0.11"
