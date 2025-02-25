@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use chat_common::{file_ops, Args, Message, MessageStream};
 use clap::Parser;
 use std::{
@@ -8,18 +9,18 @@ use std::{
 };
 use tracing::{error, info, warn};
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     // Initialize tracing subscriber
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
-    let stream = TcpStream::connect(args.addr())?;
-    let receiver_stream = stream.try_clone()?;
+    let stream = TcpStream::connect(args.addr()).context("Failed to connect to server")?;
+    let receiver_stream = stream.try_clone().context("Failed to clone TCP stream")?;
     info!("Connected to {}", args.addr());
 
     // Create directories if they don't exist
-    fs::create_dir_all("images")?;
-    fs::create_dir_all("files")?;
+    fs::create_dir_all("images").context("Failed to create images directory")?;
+    fs::create_dir_all("files").context("Failed to create files directory")?;
 
     spawn_receiver_thread(receiver_stream);
 
@@ -34,7 +35,7 @@ fn spawn_receiver_thread(mut stream: TcpStream) {
     });
 }
 
-fn handle_outgoing_messages(mut stream: TcpStream) -> io::Result<()> {
+fn handle_outgoing_messages(mut stream: TcpStream) -> Result<()> {
     let stdin = io::stdin();
     let mut lines = stdin.lock().lines();
 
@@ -52,7 +53,7 @@ fn handle_outgoing_messages(mut stream: TcpStream) -> io::Result<()> {
     Ok(())
 }
 
-fn parse_and_process_message(line: &str) -> io::Result<Option<Message>> {
+fn parse_and_process_message(line: &str) -> Result<Option<Message>> {
     if !line.starts_with(".file ") && !line.starts_with(".image ") {
         return Ok(Some(Message::Text(line.to_string())));
     }
@@ -75,7 +76,7 @@ fn parse_and_process_message(line: &str) -> io::Result<Option<Message>> {
     }
 }
 
-fn handle_incoming(stream: &mut TcpStream) -> io::Result<()> {
+fn handle_incoming(stream: &mut TcpStream) -> Result<()> {
     while let Ok(message) = stream.read_message() {
         match message {
             Message::Text(text) => {

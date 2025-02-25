@@ -10,3 +10,4 @@ clap = { version = "4.0", features = ["derive"] }
 chrono = "0.4"
 image = "0.24"
 infer = "0.15"
+thiserror = "1.0"

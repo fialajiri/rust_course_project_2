@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use chat_common::{Args, Message, MessageStream};
 use clap::Parser;
 use std::{
-    io,
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex},
     thread,
@@ -10,12 +10,12 @@ use tracing::{error, info};
 
 type Clients = Arc<Mutex<Vec<TcpStream>>>;
 
-fn main() {
+fn main() -> Result<()> {
     // Initialize tracing subscriber
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
-    let listener = TcpListener::bind(args.addr()).expect("Failed to bind to address");
+    let listener = TcpListener::bind(args.addr()).context("Failed to bind to address")?;
     info!("Server listening on {}", args.addr());
 
     let clients: Clients = Arc::new(Mutex::new(Vec::new()));
@@ -26,6 +26,8 @@ fn main() {
             Err(e) => error!("Connection failed: {}", e),
         }
     }
+
+    Ok(())
 }
 
 fn handle_new_client(stream: TcpStream, clients: &Clients) {
@@ -43,7 +45,7 @@ fn handle_new_client(stream: TcpStream, clients: &Clients) {
     });
 }
 
-fn handle_connection(mut stream: TcpStream, clients: &Clients) -> io::Result<()> {
+fn handle_connection(mut stream: TcpStream, clients: &Clients) -> Result<()> {
     while let Ok(message) = stream.read_message() {
         if let Err(e) = process_message(&stream, &message, clients) {
             error!("Error processing message: {}", e);
@@ -53,7 +55,7 @@ fn handle_connection(mut stream: TcpStream, clients: &Clients) -> io::Result<()>
     Ok(())
 }
 
-fn process_message(stream: &TcpStream, message: &Message, clients: &Clients) -> io::Result<()> {
+fn process_message(stream: &TcpStream, message: &Message, clients: &Clients) -> Result<()> {
     // Log message
     match message {
         Message::Text(text) => info!("{}: {}", stream.peer_addr()?, text),
@@ -65,7 +67,7 @@ fn process_message(stream: &TcpStream, message: &Message, clients: &Clients) -> 
     broadcast_message(stream, message, clients)
 }
 
-fn broadcast_message(sender: &TcpStream, message: &Message, clients: &Clients) -> io::Result<()> {
+fn broadcast_message(sender: &TcpStream, message: &Message, clients: &Clients) -> Result<()> {
     let sender_addr = sender.peer_addr()?;
     let mut clients = clients.lock().unwrap();
     clients.retain(|client| {
