@@ -58,5 +58,3 @@ impl Args {
         format!("{}:{}", self.host, self.port)
     }
 }
-
-

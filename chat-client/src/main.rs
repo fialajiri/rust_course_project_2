@@ -6,12 +6,16 @@ use std::{
     net::TcpStream,
     thread,
 };
+use tracing::{error, info, warn};
 
 fn main() -> io::Result<()> {
+    // Initialize tracing subscriber
+    tracing_subscriber::fmt::init();
+
     let args = Args::parse();
     let stream = TcpStream::connect(args.addr())?;
     let receiver_stream = stream.try_clone()?;
-    println!("Connected to {}", args.addr());
+    info!("Connected to {}", args.addr());
 
     // Create directories if they don't exist
     fs::create_dir_all("images")?;
@@ -25,7 +29,7 @@ fn main() -> io::Result<()> {
 fn spawn_receiver_thread(mut stream: TcpStream) {
     thread::spawn(move || {
         if let Err(e) = handle_incoming(&mut stream) {
-            eprintln!("Error handling incoming messages: {}", e);
+            error!("Error handling incoming messages: {}", e);
         }
     });
 }
@@ -55,7 +59,7 @@ fn parse_and_process_message(line: &str) -> io::Result<Option<Message>> {
 
     let parts: Vec<&str> = line.splitn(2, ' ').collect();
     if parts.len() != 2 {
-        eprintln!("Invalid command format. Use: .file <path> or .image <path>");
+        warn!("Invalid command format. Use: .file <path> or .image <path>");
         return Ok(None);
     }
 
@@ -65,29 +69,26 @@ fn parse_and_process_message(line: &str) -> io::Result<Option<Message>> {
     match file_ops::process_file_command(command, path) {
         Ok(msg) => Ok(Some(msg)),
         Err(e) => {
-            eprintln!("Error processing file: {}", e);
+            error!("Error processing file: {}", e);
             Ok(None)
         }
     }
 }
 
 fn handle_incoming(stream: &mut TcpStream) -> io::Result<()> {
-    loop {
-        match stream.read_message() {
-            Ok(message) => match message {
-                Message::Text(text) => {
-                    println!("Received: {}", text);
-                }
-                Message::File { name, data } => {
-                    println!("Receiving file: {}", name);
-                    file_ops::save_file(&name, data)?;
-                }
-                Message::Image { name, data } => {
-                    println!("Receiving image: {}", name);
-                    file_ops::save_image(&name, data)?;
-                }
-            },
-            Err(_) => break,
+    while let Ok(message) = stream.read_message() {
+        match message {
+            Message::Text(text) => {
+                info!("Received: {}", text);
+            }
+            Message::File { name, data } => {
+                info!("Receiving file: {}", name);
+                file_ops::save_file(&name, data)?;
+            }
+            Message::Image { name, data } => {
+                info!("Receiving image: {}", name);
+                file_ops::save_image(&name, data)?;
+            }
         }
     }
     Ok(())

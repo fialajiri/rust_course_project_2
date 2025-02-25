@@ -7,14 +7,13 @@ pub fn process_file_command(command: &str, path_str: &str) -> io::Result<Message
     println!("Processing file command: {}", path_str);
     println!("Command: {}", command);
 
-    
     if !path.exists() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
             format!("File not found: {}", path_str),
         ));
     }
-    
+
     if !path.is_file() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -44,7 +43,7 @@ pub fn save_file(name: &str, data: Vec<u8>) -> io::Result<()> {
     fs::write(path, data)
 }
 
-pub fn save_image(name: &str, data: Vec<u8>) -> io::Result<()> {    
+pub fn save_image(name: &str, data: Vec<u8>) -> io::Result<()> {
     let img = image::load_from_memory(&data).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
@@ -60,5 +59,3 @@ pub fn save_image(name: &str, data: Vec<u8>) -> io::Result<()> {
     img.save_with_format(&path, image::ImageFormat::Png)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
 }
-
-
