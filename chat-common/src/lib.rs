@@ -8,7 +8,7 @@ pub const DEFAULT_PORT: u16 = 8080;
 
 pub mod file_ops;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Message {
     Text(String),
     File { name: String, data: Vec<u8> },
@@ -56,5 +56,30 @@ pub struct Args {
 impl Args {
     pub fn addr(&self) -> String {
         format!("{}:{}", self.host, self.port)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::TcpListener;
+    use std::thread;
+
+    #[test]
+    fn test_message_stream_write_and_read() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let message = Message::Text("Hello, world!".to_string());
+            stream.write_message(&message).unwrap();
+        });
+
+        let mut stream = TcpStream::connect(addr).unwrap();
+        let message = stream.read_message().unwrap();
+        assert_eq!(message, Message::Text("Hello, world!".to_string()));
+
+        handle.join().unwrap();
     }
 }

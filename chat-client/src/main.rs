@@ -10,7 +10,6 @@ use std::{
 use tracing::{error, info, warn};
 
 fn main() -> Result<()> {
-    // Initialize tracing subscriber
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
@@ -55,6 +54,10 @@ fn handle_outgoing_messages(mut stream: TcpStream) -> Result<()> {
 
 fn parse_and_process_message(line: &str) -> Result<Option<Message>> {
     if !line.starts_with(".file ") && !line.starts_with(".image ") {
+        if line.starts_with('.') {
+            warn!("Invalid command format. Use: .file <path> or .image <path>");
+            return Ok(None);
+        }
         return Ok(Some(Message::Text(line.to_string())));
     }
 
@@ -93,4 +96,38 @@ fn handle_incoming(stream: &mut TcpStream) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chat_common::Message;
+
+    #[test]
+    fn test_parse_and_process_message_text() {
+        let line = "Hello, world!";
+        let result = parse_and_process_message(line).unwrap();
+        assert_eq!(result, Some(Message::Text(line.to_string())));
+    }
+
+    #[test]
+    fn test_parse_and_process_message_file_command() {
+        let line = ".file path/to/file.txt";
+        let result = parse_and_process_message(line);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_and_process_message_image_command() {
+        let line = ".image path/to/image.png";
+        let result = parse_and_process_message(line);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_and_process_message_invalid_command() {
+        let line = ".invalid path/to/file.txt";
+        let result = parse_and_process_message(line).unwrap();
+        assert_eq!(result, None);
+    }
 }

@@ -14,6 +14,20 @@
 - Here I improve the solution and kept the original image name and to &lt;original_name_timestamp&gt;.png. ✓
 - Automatically convert any receiving images into png type ✓
 
+## Homework VI
+
+- Transform both client and server parts into separate Cargo crates ✓
+- Structure the project directory to clearly separate the two parts of the application ✓
+- Identify the shared functionality and abstract into the common library ✓
+- Added `tracing` and `tracing-subscriber` crates for logging ✓
+- Added `chrono` crate for dates and time operations ✓
+- Added `anyhow` for better error handling and edding contect to errors ✓
+- Added `thiserror` crate for creating custom errors ✓
+- Added `tempfile` crate for managing temprary files and directories ✓
+- Updated the `README.md` with documentation of how to use the applications ✓
+- Added comments to the code to explain reasoning ✓
+- Added test for client, server and common library ✓
+
 ## Overview
 
 This project consists of a chat server and client implemented in Rust. The server can handle multiple clients simultaneously, allowing them to send text messages, files, and images to each other. The client can connect to the server, send messages, and receive messages from other clients.
@@ -31,7 +45,7 @@ This project consists of a chat server and client implemented in Rust. The serve
 
 To start the server, run the following command:
 
-cargo run --bin chat-server -- --addr &lt;hostname&gt;:&lt;port&gt;
+`cargo run --bin chat-server -- --addr <hostname>:<port>`
 
 - Replace `<hostname>` with the desired hostname or IP address.
 - Replace `<port>` with the desired port number.
@@ -41,7 +55,7 @@ cargo run --bin chat-server -- --addr &lt;hostname&gt;:&lt;port&gt;
 
 To start the client, run the following command:
 
-cargo run --bin chat-client -- --addr &lt;hostname&gt;:&lt;port&gt;
+`cargo run --bin chat-client -- --addr <hostname>:<port>`
 
 - Replace `<hostname>` with the server's hostname or IP address.
 - Replace `<port>` with the server's port number.
@@ -61,13 +75,30 @@ cargo run --bin chat-client -- --addr &lt;hostname&gt;:&lt;port&gt;
 
 ## Dependencies
 
-- **Clap**: For command-line argument parsing.
+- **anyhow**: For better error handling and adding context to errors.
+- **chrono**: For date and time operations.
+- **clap**: For command-line argument parsing.
+- **image**: For handling image files.
+- **serde**: For serialization and deserialization.
+- **serde_cbor**: For CBOR (Concise Binary Object Representation) serialization.
+- **thiserror**: For creating custom errors.
+- **tempfile**: For managing temporary files and directories.
+- **tracing**: For application-level tracing and logging.
+- **tracing-subscriber**: For collecting and recording tracing data.
 - **Chat Common**: A shared library for message handling and file operations.
 
 ## Building
 
 To build the project, run:
 
-cargo build --release
+`cargo build --release`
 
 This will compile the server and client binaries in the `target/release` directory.
+
+## Testing
+
+To run the tests, use:
+
+`cargo test`
+
+This will execute all the tests in the project, ensuring that the functionality is working as expected.

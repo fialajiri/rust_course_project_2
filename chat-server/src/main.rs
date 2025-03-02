@@ -11,7 +11,6 @@ use tracing::{error, info};
 type Clients = Arc<Mutex<Vec<TcpStream>>>;
 
 fn main() -> Result<()> {
-    // Initialize tracing subscriber
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
@@ -56,14 +55,12 @@ fn handle_connection(mut stream: TcpStream, clients: &Clients) -> Result<()> {
 }
 
 fn process_message(stream: &TcpStream, message: &Message, clients: &Clients) -> Result<()> {
-    // Log message
     match message {
         Message::Text(text) => info!("{}: {}", stream.peer_addr()?, text),
         Message::File { name, .. } => info!("{}: Sent file {}", stream.peer_addr()?, name),
         Message::Image { name, .. } => info!("{}: Sent image {}", stream.peer_addr()?, name),
     }
 
-    // Broadcast message, excluding the sender
     broadcast_message(stream, message, clients)
 }
 
@@ -81,4 +78,41 @@ fn broadcast_message(sender: &TcpStream, message: &Message, clients: &Clients) -
         }
     });
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use std::net::{TcpListener, TcpStream};
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn test_handle_new_client() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let clients: Clients = Arc::new(Mutex::new(Vec::new()));
+
+        let (tx, rx) = mpsc::channel();
+
+        // Spawn a thread to simulate a client connection
+        thread::spawn(move || {
+            let mut stream = TcpStream::connect(addr).unwrap();
+            stream.write_all(b"Hello, server!").unwrap();
+            tx.send(()).unwrap(); // Notify that the client has connected
+        });
+
+        // Accept the connection and handle the new client
+        if let Ok((stream, _)) = listener.accept() {
+            handle_new_client(stream, &clients);
+        }
+
+        // Wait for the client to connect
+        rx.recv_timeout(Duration::from_secs(1)).unwrap();
+
+        // Check if the client was added to the clients list
+        assert_eq!(clients.lock().unwrap().len(), 1);
+    }
 }

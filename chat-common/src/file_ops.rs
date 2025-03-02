@@ -60,3 +60,47 @@ pub fn save_image(name: &str, data: Vec<u8>) -> Result<(), FileOpsError> {
     img.save_with_format(&path, image::ImageFormat::Png)
         .map_err(|e| FileOpsError::ImageProcessingError(e.to_string()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_process_file_command_file() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.txt");
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(file, "Hello, world!").unwrap();
+
+        let result = process_file_command(".file", file_path.to_str().unwrap());
+        assert!(result.is_ok());
+        if let Ok(Message::File { name, data }) = result {
+            assert_eq!(name, "test.txt");
+            assert_eq!(data, b"Hello, world!\n");
+        }
+    }
+
+    #[test]
+    fn test_process_file_command_image() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.png");
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(file, "fake image data").unwrap();
+
+        let result = process_file_command(".image", file_path.to_str().unwrap());
+        assert!(result.is_ok());
+        if let Ok(Message::Image { name, data }) = result {
+            assert_eq!(name, "test.png");
+            assert_eq!(data, b"fake image data\n");
+        }
+    }
+
+    #[test]
+    fn test_process_file_command_invalid() {
+        let result = process_file_command(".invalid", "nonexistent.txt");
+        assert!(result.is_err());
+    }
+}
