@@ -15,6 +15,7 @@ fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
+    println!("Connecting to {}", args.addr());
     let stream = TcpStream::connect(args.addr()).context("Failed to connect to server")?;
     let receiver_stream = stream.try_clone().context("Failed to clone TCP stream")?;
     info!("Connected to {}", args.addr());

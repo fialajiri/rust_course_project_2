@@ -55,7 +55,7 @@ fn process_file_command(command: &str, path: &str) -> Result<Option<Message>> {
     match file_ops::process_file_command(command, path) {
         Ok(msg) => Ok(Some(msg)),
         Err(e) => {
-            error!("Error processing file: {}", e);
+            error!("{}", e);
             Ok(Some(file_ops::create_error_message(&e)))
         }
     }

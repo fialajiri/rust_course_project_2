@@ -5,7 +5,6 @@ use tracing::{error, info};
 
 pub fn handle_incoming(stream: &mut TcpStream) -> Result<()> {
     while let Ok(message) = stream.read_message() {
-        println!("Received message: {:?}", message);
         match message {
             Message::Text(text) => {
                 info!("Received: {}", text);
@@ -16,13 +15,13 @@ pub fn handle_incoming(stream: &mut TcpStream) -> Result<()> {
             Message::File { name, data } => {
                 info!("Receiving file: {}", name);
                 if let Err(e) = file_ops::save_file(&name, data) {
-                    error!("Failed to save file {}: {}", name, e);
+                    error!("{}", e);
                 }
             }
             Message::Image { name, data } => {
                 info!("Receiving image: {}", name);
                 if let Err(e) = file_ops::save_image(&name, data) {
-                    error!("Failed to save image {}: {}", name, e);
+                    error!("{}", e);
                 }
             }
             Message::Error { code, message } => {
