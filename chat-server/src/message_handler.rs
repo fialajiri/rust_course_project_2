@@ -4,6 +4,7 @@ use chat_common::{Message, MessageStream};
 use std::net::TcpStream;
 use tracing::{error, info};
 
+#[derive(Clone)]
 pub struct MessageHandler {
     clients: Clients,
 }

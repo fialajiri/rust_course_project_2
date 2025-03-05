@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # Rust Developer Course
 
 ## Homework V
@@ -27,6 +29,39 @@
 - Updated the `README.md` with documentation of how to use the applications ✓
 - Added comments to the code to explain reasoning ✓
 - Added test for client, server and common library ✓
+
+## Homework VII
+
+### Error Handling Improvements
+
+- Enhanced error handling using `anyhow` and `thiserror` crates ✓
+  - Custom error types for specific failure scenarios
+  - Detailed error context and chain tracking
+  - Better error messages for debugging
+- Implemented comprehensive server-side error handling ✓
+  - Graceful handling of connection failures  
+  - Detailed logging of error conditions
+- Added client-side error management ✓
+  - New message types for Error and System notifications
+  - User-friendly error messages  
+
+### Code Structure Improvements
+
+- Refactored server architecture ✓
+  - Split into logical modules (connection, message handling, state management)
+  - Improved separation of concerns
+  - Better resource management
+- Reorganized client codebase ✓
+  - Modular command processing
+  - Separate UI and network layers
+  - Cleaner message handling logic
+
+### Testing Enhancements
+
+- Expanded test coverage ✓
+  - Unit tests for core functionality
+  - Integration tests for client-server communication
+  - Error handling test cases 
 
 ## Overview
 

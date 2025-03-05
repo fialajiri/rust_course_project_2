@@ -39,7 +39,7 @@ pub fn process_file_command(command: &str, path_str: &str) -> Result<Message> {
 }
 
 pub fn save_file(name: &str, data: Vec<u8>) -> Result<()> {
-    let path = Path::new("files").join(name);    
+    let path = Path::new("files").join(name);
     create_directory("files")?;
     fs::write(path, data)?;
     Ok(())
