@@ -6,10 +6,15 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0"
 chat-common = {path = "../chat-common"}
+chrono = {version = "0.4", features = ["serde"]}
 clap = {version = "4.0", features = ["derive"]}
-serde_cbor = "0.11"
+diesel = {version = "2.2.0", features = ["postgres", "chrono"]}
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+tokio = {version = "1.0", features = ["full", "net"]}
 tracing = "0.1.41"
 tracing-subscriber = "0.3"
+dotenvy = "0.15.7"
 
 [lib]
 name = "chat_server"
@@ -20,4 +25,4 @@ name = "chat-server"
 path = "src/main.rs"
 
 [dev-dependencies]
-chat-common = { path = "../chat-common" }
+chat-common = {path = "../chat-common"}

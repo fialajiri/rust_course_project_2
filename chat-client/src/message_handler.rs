@@ -1,10 +1,11 @@
 use anyhow::Result;
-use chat_common::{file_ops, Message, MessageStream};
-use std::net::TcpStream;
+use chat_common::async_message_stream::AsyncMessageStream;
+use chat_common::{file_ops, Message};
+use tokio::net::tcp::OwnedReadHalf;
 use tracing::{error, info};
 
-pub fn handle_incoming(stream: &mut TcpStream) -> Result<()> {
-    while let Ok(message) = stream.read_message() {
+pub async fn handle_incoming(mut stream: OwnedReadHalf) -> Result<()> {
+    while let Ok(message) = AsyncMessageStream::read_message(&mut stream).await {
         match message {
             Message::Text(text) => {
                 info!("Received: {}", text);
@@ -14,13 +15,13 @@ pub fn handle_incoming(stream: &mut TcpStream) -> Result<()> {
             }
             Message::File { name, data } => {
                 info!("Receiving file: {}", name);
-                if let Err(e) = file_ops::save_file(&name, data) {
+                if let Err(e) = file_ops::save_file(&name, data).await {
                     error!("{}", e);
                 }
             }
             Message::Image { name, data } => {
                 info!("Receiving image: {}", name);
-                if let Err(e) = file_ops::save_image(&name, data) {
+                if let Err(e) = file_ops::save_image(&name, data).await {
                     error!("{}", e);
                 }
             }
@@ -39,8 +40,8 @@ mod tests {
         file_ops, Message,
     };
 
-    #[test]
-    fn test_create_error_message() {
+    #[tokio::test]
+    async fn test_create_error_message() {
         let error = ChatError::NotFound("test.txt".to_string());
         let message = file_ops::create_error_message(&error);
 

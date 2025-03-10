@@ -1,16 +1,24 @@
 use anyhow::Result;
-use chat_common::MessageStream;
-use std::io::{self, BufRead};
-use std::net::TcpStream;
+use chat_common::async_message_stream::AsyncMessageStream;
+use tokio::{
+    io::{self, AsyncBufReadExt, BufReader},
+    net::tcp::OwnedWriteHalf,
+};
 
 use crate::commands::{parse_command, process_command, Command};
 
-pub fn run_input_loop(mut stream: TcpStream) -> Result<()> {
+pub async fn run_input_loop(mut stream: OwnedWriteHalf) -> Result<()> {
     let stdin = io::stdin();
-    let mut lines = stdin.lock().lines();
+    let mut reader = BufReader::new(stdin);
+    let mut line = String::new();
 
-    while let Some(Ok(line)) = lines.next() {
-        let command = parse_command(&line);
+    loop {
+        line.clear();
+        if reader.read_line(&mut line).await? == 0 {
+            break;
+        }
+
+        let command = parse_command(line.trim());
 
         // Handle quit command directly
         if matches!(command, Command::Quit) {
@@ -18,8 +26,8 @@ pub fn run_input_loop(mut stream: TcpStream) -> Result<()> {
         }
 
         // Process other commands
-        if let Ok(Some(message)) = process_command(command) {
-            stream.write_message(&message)?;
+        if let Ok(Some(message)) = process_command(command).await {
+            AsyncMessageStream::write_message(&mut stream, &message).await?;
         }
     }
 

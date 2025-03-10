@@ -1,4 +1,10 @@
 /target
 /images
 /files
+/chat-server/target
+/chat-server/Cargo.lock
+/chat-common/target
+/chat-common/Cargo.lock
+/chat-client/target
+/chat-client/Cargo.lock
 Cargo.lock

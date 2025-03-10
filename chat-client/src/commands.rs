@@ -38,11 +38,11 @@ pub fn parse_command(input: &str) -> Command {
     Command::Text(input.to_string())
 }
 
-pub fn process_command(command: Command) -> Result<Option<Message>> {
+pub async fn process_command(command: Command) -> Result<Option<Message>> {
     match command {
         Command::Text(text) => Ok(Some(Message::Text(text))),
-        Command::File(path) => process_file_command(".file", &path),
-        Command::Image(path) => process_file_command(".image", &path),
+        Command::File(path) => process_file_command(".file", &path).await,
+        Command::Image(path) => process_file_command(".image", &path).await,
         Command::Quit => Ok(None),
         Command::Invalid => {
             warn!("Invalid command format. Use: .file <path> or .image <path>");
@@ -51,8 +51,8 @@ pub fn process_command(command: Command) -> Result<Option<Message>> {
     }
 }
 
-fn process_file_command(command: &str, path: &str) -> Result<Option<Message>> {
-    match file_ops::process_file_command(command, path) {
+async fn process_file_command(command: &str, path: &str) -> Result<Option<Message>> {
+    match file_ops::process_file_command(command, path).await {
         Ok(msg) => Ok(Some(msg)),
         Err(e) => {
             error!("{}", e);
@@ -69,8 +69,8 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
 
-    #[test]
-    fn test_parse_command_text() {
+    #[tokio::test]
+    async fn test_parse_command_text() {
         let line = "Hello, world!";
         let command = parse_command(line);
         if let Command::Text(text) = command {
@@ -80,8 +80,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_parse_command_file() {
+    #[tokio::test]
+    async fn test_parse_command_file() {
         let line = ".file /path/to/file.txt";
         let command = parse_command(line);
         if let Command::File(path) = command {
@@ -91,8 +91,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_parse_command_image() {
+    #[tokio::test]
+    async fn test_parse_command_image() {
         let line = ".image /path/to/image.png";
         let command = parse_command(line);
         if let Command::Image(path) = command {
@@ -102,39 +102,39 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_parse_command_quit() {
+    #[tokio::test]
+    async fn test_parse_command_quit() {
         let line = ".quit";
         let command = parse_command(line);
         assert!(matches!(command, Command::Quit));
     }
 
-    #[test]
-    fn test_parse_command_invalid() {
+    #[tokio::test]
+    async fn test_parse_command_invalid() {
         let line = ".invalid command";
         let command = parse_command(line);
         assert!(matches!(command, Command::Invalid));
     }
 
-    #[test]
-    fn test_parse_command_empty_path() {
+    #[tokio::test]
+    async fn test_parse_command_empty_path() {
         let line = ".file ";
         let command = parse_command(line);
         assert!(matches!(command, Command::Invalid));
     }
 
-    #[test]
-    fn test_command_text() {
+    #[tokio::test]
+    async fn test_command_text() {
         let line = "Hello, world!";
         let command = parse_command(line);
         assert!(matches!(command, Command::Text(_)));
 
-        let result = process_command(command).unwrap();
+        let result = process_command(command).await.unwrap();
         assert_eq!(result, Some(Message::Text(line.to_string())));
     }
 
-    #[test]
-    fn test_command_file() {
+    #[tokio::test]
+    async fn test_command_file() {
         // Create a temporary file for testing
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
@@ -145,7 +145,7 @@ mod tests {
         let command = parse_command(&line);
         assert!(matches!(command, Command::File(_)));
 
-        let result = process_command(command).unwrap();
+        let result = process_command(command).await.unwrap();
         match result {
             Some(Message::File { name, data }) => {
                 assert_eq!(name, "test.txt");
@@ -155,8 +155,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_command_image_with_invalid_image() {
+    #[tokio::test]
+    async fn test_command_image_with_invalid_image() {
         // Create a temporary file that's not a valid image
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("fake.png");
@@ -167,7 +167,7 @@ mod tests {
         let command = parse_command(&line);
         assert!(matches!(command, Command::Image(_)));
 
-        let result = process_command(command).unwrap();
+        let result = process_command(command).await.unwrap();
         match result {
             Some(Message::Error { code, .. }) => {
                 assert_eq!(code, ErrorCode::ImageProcessingError);
@@ -176,13 +176,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_command_nonexistent_file() {
+    #[tokio::test]
+    async fn test_command_nonexistent_file() {
         let line = ".file /path/to/nonexistent/file.txt";
         let command = parse_command(line);
         assert!(matches!(command, Command::File(_)));
 
-        let result = process_command(command).unwrap();
+        let result = process_command(command).await.unwrap();
         match result {
             Some(Message::Error { code, .. }) => {
                 assert_eq!(code, ErrorCode::FileNotFound);
@@ -191,23 +191,23 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_command_invalid() {
+    #[tokio::test]
+    async fn test_command_invalid() {
         let line = ".invalid path/to/file.txt";
         let command = parse_command(line);
         assert!(matches!(command, Command::Invalid));
 
-        let result = process_command(command).unwrap();
+        let result = process_command(command).await.unwrap();
         assert_eq!(result, None);
     }
 
-    #[test]
-    fn test_command_quit() {
+    #[tokio::test]
+    async fn test_command_quit() {
         let line = ".quit";
         let command = parse_command(line);
         assert!(matches!(command, Command::Quit));
 
-        let result = process_command(command).unwrap();
+        let result = process_command(command).await.unwrap();
         assert_eq!(result, None);
     }
 }

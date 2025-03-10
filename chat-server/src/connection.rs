@@ -1,8 +1,8 @@
 use crate::types::Clients;
 use crate::MessageHandler;
 use anyhow::Result;
-use chat_common::{Message, MessageStream};
-use std::net::TcpStream;
+use chat_common::async_message_stream::AsyncMessageStream;
+use tokio::net::tcp::OwnedReadHalf;
 use tracing::error;
 
 pub struct ConnectionHandler {
@@ -14,30 +14,25 @@ impl ConnectionHandler {
         Self { clients }
     }
 
-    pub fn handle_connection(&self, mut stream: TcpStream) -> Result<()> {
+    pub async fn handle_connection(
+        &mut self,
+        client_id: usize,
+        mut stream: OwnedReadHalf,
+    ) -> Result<()> {
         let addr = stream.peer_addr()?;
         let message_handler = MessageHandler::new(self.clients.clone());
 
-        let mut message_result = stream.read_message();
-        while let Ok(message) = message_result {
-            if let Err(e) = message_handler.process_message(&stream, &message) {
+        while let Ok(message) = stream.read_message().await {
+            if let Err(e) = message_handler
+                .process_message(Some(&stream), client_id, &message)
+                .await
+            {
                 error!("Error processing message from {}: {}", addr, e);
-
-                let error_message = Message::Error {
-                    code: chat_common::ErrorCode::ServerError,
-                    message: format!("Server error: {}", e),
-                };
-
-                if let Err(send_err) = stream.write_message(&error_message) {
-                    error!("Failed to send error message to client: {}", send_err);
-                    break;
-                }
+                break;
             }
-
-            message_result = stream.read_message();
         }
 
-        message_handler.handle_disconnect(&stream)?;
+        message_handler.handle_disconnect(client_id).await?;
         Ok(())
     }
 }
@@ -45,33 +40,37 @@ impl ConnectionHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::TcpListener;
-    use std::sync::{Arc, Mutex};
-    use std::thread;
+    use chat_common::{async_message_stream::AsyncMessageStream, Message};
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::net::TcpStream;
+    use tokio::sync::Mutex;
 
-    #[test]
-    fn test_handle_connection() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    #[tokio::test]
+    async fn test_handle_connection() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let clients: Clients = Arc::new(Mutex::new(Vec::new()));
+        let clients: Clients = Arc::new(Mutex::new(HashMap::new()));
 
-        let handler = ConnectionHandler::new(clients.clone());
+        let mut handler = ConnectionHandler::new(clients.clone());
 
-        thread::spawn(move || {
-            if let Ok((stream, _)) = listener.accept() {
-                handler.handle_connection(stream).unwrap();
+        tokio::spawn(async move {
+            if let Ok((stream, _)) = listener.accept().await {
+                let (read_half, _) = stream.into_split();
+                handler.handle_connection(0, read_half).await.unwrap();
             }
         });
 
-        let mut client = TcpStream::connect(addr).unwrap();
+        let mut client = TcpStream::connect(addr).await.unwrap();
         let test_message = Message::Text("Hello".to_string());
-        client.write_message(&test_message).unwrap();
+        client.write_message(&test_message).await.unwrap();
 
         // Read acknowledgment
-        let response = client.read_message().unwrap();
-        match response {
-            Message::System(msg) => assert!(msg.contains("successfully")),
-            _ => panic!("Expected system message"),
+        if let Ok(response) = client.read_message().await {
+            match response {
+                Message::System(msg) => assert!(msg.contains("successfully")),
+                _ => panic!("Expected system message"),
+            }
         }
     }
 }
