@@ -16,10 +16,10 @@ services:
       context: ./chat-server
       dockerfile: Dockerfile
     environment:
-      - ROCKET_ADDRESS=0.0.0.0
-      - ROCKET_PORT=8080
+      - SERVER_ADDRESS=0.0.0.0
+      - SERVER_PORT=8080
       - DATABASE_URL=postgres://postgres:postgres@postgres/chat_db
-      - ROCKET_DATABASES={postgres={url=postgres://postgres:postgres@postgres/chat_db}}
+      - SERVER_DATABASES={postgres={url=postgres://postgres:postgres@postgres/chat_db}}
     ports:
       - 8080:8080
     volumes:

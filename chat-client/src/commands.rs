@@ -6,6 +6,7 @@ pub enum Command {
     Text(String),
     File(String),
     Image(String),
+    Auth { username: String, password: String },
     Quit,
     Invalid,
 }
@@ -13,6 +14,18 @@ pub enum Command {
 pub fn parse_command(input: &str) -> Command {
     if input == ".quit" {
         return Command::Quit;
+    }
+
+    if input.starts_with(".login ") {
+        let args = input.trim_start_matches(".login ").trim();
+        let parts: Vec<&str> = args.split_whitespace().collect();
+        if parts.len() == 2 {
+            return Command::Auth {
+                username: parts[0].to_string(),
+                password: parts[1].to_string(),
+            };
+        }
+        return Command::Invalid;
     }
 
     if input.starts_with(".file ") {
@@ -43,9 +56,10 @@ pub async fn process_command(command: Command) -> Result<Option<Message>> {
         Command::Text(text) => Ok(Some(Message::Text(text))),
         Command::File(path) => process_file_command(".file", &path).await,
         Command::Image(path) => process_file_command(".image", &path).await,
+        Command::Auth { username, password } => Ok(Some(Message::Auth { username, password })),
         Command::Quit => Ok(None),
         Command::Invalid => {
-            warn!("Invalid command format. Use: .file <path> or .image <path>");
+            warn!("Invalid command format. Use: .login <username> <password>, .file <path>, or .image <path>");
             Ok(None)
         }
     }
@@ -209,5 +223,35 @@ mod tests {
 
         let result = process_command(command).await.unwrap();
         assert_eq!(result, None);
+    }
+
+    #[tokio::test]
+    async fn test_auth_command() {
+        let line = ".login alice password123";
+        let command = parse_command(line);
+
+        match &command {
+            Command::Auth { username, password } => {
+                assert_eq!(username, "alice");
+                assert_eq!(password, "password123");
+            }
+            _ => panic!("Expected Auth command"),
+        }
+
+        let result = process_command(command).await.unwrap();
+        match result {
+            Some(Message::Auth { username, password }) => {
+                assert_eq!(username, "alice");
+                assert_eq!(password, "password123");
+            }
+            _ => panic!("Expected Auth message"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_invalid_auth_command() {
+        let line = ".login alice"; // Missing password
+        let command = parse_command(line);
+        assert!(matches!(command, Command::Invalid));
     }
 }

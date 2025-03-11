@@ -28,6 +28,20 @@ pub async fn handle_incoming(mut stream: OwnedReadHalf) -> Result<()> {
             Message::Error { code, message } => {
                 error!("Server error [{}]: {}", format!("{:?}", code), message);
             }
+            Message::AuthResponse {
+                success,
+                token,
+                message,
+            } => {
+                if success {
+                    info!("Authentication successful: {}", message);
+                } else {
+                    error!("Authentication failed: {}", message);
+                }
+            }
+            Message::Auth { .. } => {
+                // Client doesn't need to handle incoming Auth messages
+            }
         }
     }
     Ok(())

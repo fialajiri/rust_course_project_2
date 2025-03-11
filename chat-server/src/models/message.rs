@@ -1,4 +1,4 @@
-use crate::schema::{messages, users};
+use crate::schema::messages;
 use chrono::NaiveDateTime;
 use diesel::deserialize::FromSqlRow;
 use diesel::expression::AsExpression;
@@ -8,33 +8,12 @@ use diesel::serialize::ToSql;
 use diesel::sql_types::Text;
 use diesel::{deserialize::FromSql, pg::PgValue};
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display};
 use std::io::Write;
 use std::str::FromStr;
 
-#[derive(Queryable, Identifiable, AsChangeset, Serialize, Deserialize, Selectable)]
-#[diesel(table_name = users)]
-pub struct User {
-    pub id: i32,
-    pub username: String,
-    pub email: String,
-    pub password_hash: String,
-    #[serde(skip_deserializing)]
-    pub created_at: NaiveDateTime,
-    #[serde(skip_deserializing)]
-    pub updated_at: NaiveDateTime,
-}
-
-#[derive(Insertable, Deserialize)]
-#[diesel(table_name = users)]
-pub struct NewUser {
-    pub username: String,
-    pub email: String,
-    pub password_hash: String,
-}
-
 #[derive(Queryable, Identifiable, AsChangeset, Serialize, Deserialize, Debug)]
 #[diesel(table_name = messages)]
-// #[diesel(belongs_to(User, foreign_key = sender_id))]
 pub struct Message {
     pub id: i32,
     pub sender_id: i32,
@@ -63,12 +42,12 @@ pub enum MessageType {
     Image,
 }
 
-impl ToString for MessageType {
-    fn to_string(&self) -> String {
+impl Display for MessageType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MessageType::Text => String::from("text"),
-            MessageType::File => String::from("file"),
-            MessageType::Image => String::from("image"),
+            MessageType::Text => write!(f, "text"),
+            MessageType::File => write!(f, "file"),
+            MessageType::Image => write!(f, "image"),
         }
     }
 }

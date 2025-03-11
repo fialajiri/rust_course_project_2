@@ -6,6 +6,6 @@ WORKDIR /app
 COPY . .
 
 RUN cargo install diesel_cli --no-default-features --features postgres
+RUN cargo install cargo-watch
 
-# Build and run the server directly (removed cargo-watch for simplicity)
-CMD ["cargo", "run", "--bin", "chat-server"]
+CMD ["cargo", "watch", "--why", "-x", "build"]

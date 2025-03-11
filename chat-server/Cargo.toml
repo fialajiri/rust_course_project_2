@@ -5,16 +5,18 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0"
+bcrypt = "0.17.0"
 chat-common = {path = "../chat-common"}
 chrono = {version = "0.4", features = ["serde"]}
-clap = {version = "4.0", features = ["derive"]}
-diesel = {version = "2.2.0", features = ["postgres", "chrono"]}
+diesel = {version = "2.1", features = ["chrono", "postgres"]}
+diesel-async = {version = "0.5.2", features = ["postgres", "deadpool"]}
+dotenvy = "0.15.7"
+rand = "0.9.0"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 tokio = {version = "1.0", features = ["full", "net"]}
 tracing = "0.1.41"
 tracing-subscriber = "0.3"
-dotenvy = "0.15.7"
 
 [lib]
 name = "chat_server"

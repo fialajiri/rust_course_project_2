@@ -1,4 +1,6 @@
+use chrono::{DateTime, Utc};
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_HOST: &str = "127.0.0.1";
 pub const DEFAULT_PORT: u16 = 8080;
@@ -10,15 +12,32 @@ pub mod file_ops;
 // Re-export commonly used items
 pub use async_message_stream::AsyncMessageStream;
 pub use error::{ChatError, ErrorCode, Result};
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Message {
     Text(String),
     System(String),
-    File { name: String, data: Vec<u8> },
-    Image { name: String, data: Vec<u8> },
-    Error { code: ErrorCode, message: String },
+    File {
+        name: String,
+        data: Vec<u8>,
+    },
+    Image {
+        name: String,
+        data: Vec<u8>,
+    },
+    Error {
+        code: ErrorCode,
+        message: String,
+    },
+    Auth {
+        username: String,
+        password: String,
+    },
+    AuthResponse {
+        success: bool,
+        token: Option<String>,
+        message: String,
+    },
 }
 
 #[derive(Parser)]
@@ -33,6 +52,13 @@ impl Args {
     pub fn addr(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Session {
+    pub token: String,
+    pub user_id: i32,
+    pub expires_at: DateTime<Utc>,
 }
 
 #[cfg(test)]
