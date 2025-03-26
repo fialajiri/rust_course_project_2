@@ -7,15 +7,21 @@ use tokio::net::tcp::OwnedReadHalf;
 use tracing::error;
 
 use super::message::handler::MessageService;
+use chat_common::encryption::EncryptionService;
 
 pub struct ConnectionService {
     clients: Clients,
     pool: Arc<DbPool>,
+    encryption: Arc<EncryptionService>,
 }
 
 impl ConnectionService {
-    pub fn new(clients: Clients, pool: Arc<DbPool>) -> Self {
-        Self { clients, pool }
+    pub fn new(clients: Clients, pool: Arc<DbPool>, encryption: Arc<EncryptionService>) -> Self {
+        Self {
+            clients,
+            pool,
+            encryption,
+        }
     }
 
     pub async fn handle_connection(
@@ -24,7 +30,11 @@ impl ConnectionService {
         mut stream: OwnedReadHalf,
     ) -> Result<()> {
         let addr = stream.peer_addr()?;
-        let message_service = MessageService::new(self.clients.clone(), Arc::clone(&self.pool));
+        let message_service = MessageService::new(
+            self.clients.clone(),
+            Arc::clone(&self.pool),
+            Arc::clone(&self.encryption),
+        );
 
         while let Ok(message) = stream.read_message().await {
             if let Err(e) = message_service

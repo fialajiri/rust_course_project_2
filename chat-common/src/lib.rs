@@ -1,11 +1,13 @@
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
+use serde_json;
 
 pub const DEFAULT_HOST: &str = "127.0.0.1";
 pub const DEFAULT_PORT: u16 = 8080;
 
 pub mod async_message_stream;
+pub mod encryption;
 pub mod error;
 pub mod file_ops;
 
@@ -19,10 +21,12 @@ pub enum Message {
     System(String),
     File {
         name: String,
+        metadata: serde_json::Value,
         data: Vec<u8>,
     },
     Image {
         name: String,
+        metadata: serde_json::Value,
         data: Vec<u8>,
     },
     Error {

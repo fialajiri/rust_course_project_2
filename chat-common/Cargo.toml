@@ -11,6 +11,14 @@ clap = {version = "4.0", features = ["derive"]}
 image = "0.24"
 serde = {version = "1.0", features = ["derive"]}
 serde_cbor = "0.11"
+serde_json = "1.0.140"
 tempfile = "3.17.1"
 thiserror = "2.0.11"
 tokio = {version = "1.0", features = ["full", "net"]}
+aes-gcm = "0.10.3"
+base64 = "0.21.7"
+rand = "0.8.5"
+anyhow = "1.0"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }

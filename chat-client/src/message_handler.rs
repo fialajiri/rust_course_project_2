@@ -1,50 +1,105 @@
 use anyhow::Result;
-use chat_common::async_message_stream::AsyncMessageStream;
-use chat_common::{file_ops, Message};
-use tokio::net::tcp::OwnedReadHalf;
+use chat_common::{
+    async_message_stream::AsyncMessageStream,
+    encryption::{file::EncryptedFileMetadata, message::EncryptedMessage, EncryptionService},
+    file_ops, Message,
+};
+use std::sync::Arc;
+use tokio::{io::BufReader, net::tcp::OwnedReadHalf};
 use tracing::{error, info};
 
-pub async fn handle_incoming(mut stream: OwnedReadHalf) -> Result<()> {
-    while let Ok(message) = AsyncMessageStream::read_message(&mut stream).await {
-        match message {
-            Message::Text(text) => {
-                info!("Received: {}", text);
-            }
-            Message::System(notification) => {
-                info!("System: {}", notification);
-            }
-            Message::File { name, data } => {
-                info!("Receiving file: {}", name);
-                if let Err(e) = file_ops::save_file(&name, data).await {
-                    error!("{}", e);
+pub struct MessageHandler {
+    encryption: Arc<EncryptionService>,
+}
+
+impl MessageHandler {
+    pub fn new(encryption: Arc<EncryptionService>) -> Self {
+        Self { encryption }
+    }
+
+    pub async fn handle_incoming(&self, mut stream: OwnedReadHalf) -> Result<()> {
+        while let Ok(message) = AsyncMessageStream::read_message(&mut stream).await {
+            match &message {
+                Message::File { data, .. } | Message::Image { data, .. } => {
+                    info!(
+                        "Received message (first 100 bytes): {:?}",
+                        &data[..100.min(data.len())]
+                    );
                 }
+                _ => info!("Received message: {:?}", message),
             }
-            Message::Image { name, data } => {
-                info!("Receiving image: {}", name);
-                if let Err(e) = file_ops::save_image(&name, data).await {
-                    error!("{}", e);
+            match message {
+                Message::Text(encrypted) => {
+                    // Decrypt the message
+                    let encrypted: EncryptedMessage = serde_json::from_str(&encrypted)?;
+                    match self.encryption.message().decrypt(&encrypted) {
+                        Ok(text) => info!("Received: {}", text),
+                        Err(e) => error!("Failed to decrypt message: {}", e),
+                    }
                 }
-            }
-            Message::Error { code, message } => {
-                error!("Server error [{}]: {}", format!("{:?}", code), message);
-            }
-            Message::AuthResponse {
-                success,
-                token,
-                message,
-            } => {
-                if success {
-                    info!("Authentication successful: {}", message);
-                } else {
-                    error!("Authentication failed: {}", message);
+                Message::System(notification) => {
+                    info!("System: {}", notification);
                 }
-            }
-            Message::Auth { .. } => {
-                // Client doesn't need to handle incoming Auth messages
+                Message::File {
+                    name,
+                    metadata,
+                    data,
+                } => {
+                    info!("Receiving encrypted file: {}", name);
+                    let mut buffer = Vec::new();
+
+                    let metadata: EncryptedFileMetadata = serde_json::from_value(metadata)?;
+
+                    self.encryption
+                        .file()
+                        .decrypt_stream(BufReader::new(&data[..]), &mut buffer, &metadata)
+                        .await?;
+
+                    if let Err(e) = file_ops::save_file(&name, buffer).await {
+                        error!("{}", e);
+                    }
+                }
+                Message::Image {
+                    name,
+                    metadata,
+                    data,
+                } => {
+                    info!("Receiving image: {}", name);
+                    let mut buffer = Vec::new();
+
+                    let metadata: EncryptedFileMetadata = serde_json::from_value(metadata)?;
+
+                    self.encryption
+                        .file()
+                        .decrypt_stream(BufReader::new(&data[..]), &mut buffer, &metadata)
+                        .await?;
+
+                    info!("Decrypted image size: {}", buffer.len());
+                    if let Err(e) = file_ops::save_image(&name, buffer).await {
+                        error!("Failed to save image: {}", e);
+                    }
+                }
+                Message::Error { code, message } => {
+                    error!("Server error [{}]: {}", format!("{:?}", code), message);
+                }
+                Message::AuthResponse {
+                    success,
+                    token: _token,
+                    message,
+                } => {
+                    if success {
+                        info!("Authentication successful: {}", message);
+                    } else {
+                        error!("Authentication failed: {}", message);
+                    }
+                }
+                Message::Auth { .. } => {
+                    // Client doesn't need to handle incoming Auth messages
+                }
             }
         }
+        Ok(())
     }
-    Ok(())
 }
 
 #[cfg(test)]

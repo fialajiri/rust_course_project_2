@@ -41,6 +41,12 @@ pub enum ChatError {
 
     #[error("Serialization error: {0}")]
     SerializationError(String),
+
+    #[error("Invalid path: {0}")]
+    InvalidPath(String),
+
+    #[error("Invalid command: {0}")]
+    InvalidCommand(String),
 }
 
 impl ChatError {
@@ -54,12 +60,26 @@ impl ChatError {
             ChatError::ImageProcessingError(_) => ErrorCode::ImageProcessingError,
             ChatError::UnknownError(_) | ChatError::IoError(_) => ErrorCode::UnknownError,
             ChatError::SerializationError(_) => ErrorCode::UnknownError,
+            ChatError::InvalidPath(_) => ErrorCode::UnknownError,
+            ChatError::InvalidCommand(_) => ErrorCode::UnknownError,
         }
     }
 }
 
 impl From<serde_cbor::Error> for ChatError {
     fn from(err: serde_cbor::Error) -> Self {
+        ChatError::SerializationError(err.to_string())
+    }
+}
+
+impl From<anyhow::Error> for ChatError {
+    fn from(err: anyhow::Error) -> Self {
+        ChatError::UnknownError(err.to_string())
+    }
+}
+
+impl From<serde_json::Error> for ChatError {
+    fn from(err: serde_json::Error) -> Self {
         ChatError::SerializationError(err.to_string())
     }
 }

@@ -34,7 +34,7 @@ async fn main() -> AnyhowResult<()> {
 
     // Initialize client handler
     let clients = Arc::new(Mutex::new(HashMap::new()));
-    let client_handler = ClientService::new(clients, Arc::clone(&pool));
+    let client_handler = ClientService::new(clients, pool)?;
 
     // Main server loop
     info!("Server started and ready to accept connections");

@@ -14,17 +14,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    sessions (id) {
-        id -> Int4,
-        user_id -> Int4,
-        #[max_length = 255]
-        token -> Varchar,
-        expires_at -> Timestamp,
-        created_at -> Timestamp,
-    }
-}
-
-diesel::table! {
     users (id) {
         id -> Int4,
         #[max_length = 50]
@@ -38,4 +27,7 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(messages, sessions, users,);
+diesel::allow_tables_to_appear_in_same_query!(
+    messages,
+    users,
+);

@@ -1,25 +1,30 @@
 use crate::services::connection_service::ConnectionService;
 use crate::types::{AuthState, ChatRoomConnection, Clients};
 use crate::utils::db_connection::DbPool;
+use chat_common::encryption::EncryptionService;
 use chat_common::error::Result;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tracing::{error, info};
 
+const ENCRYPTION_KEY: [u8; 32] = [0; 32]; // Replace with secure key management
+
 pub struct ClientService {
     clients: Clients,
     next_id: AtomicUsize,
     pool: Arc<DbPool>,
+    encryption: Arc<EncryptionService>,
 }
 
 impl ClientService {
-    pub fn new(clients: Clients, pool: Arc<DbPool>) -> Self {
-        Self {
+    pub fn new(clients: Clients, pool: Arc<DbPool>) -> Result<Self> {
+        Ok(Self {
             clients,
             next_id: AtomicUsize::new(1),
             pool,
-        }
+            encryption: Arc::new(EncryptionService::new(&ENCRYPTION_KEY)?),
+        })
     }
 
     pub async fn handle_new_client(&self, stream: TcpStream) -> Result<()> {
@@ -44,7 +49,9 @@ impl ClientService {
 
         info!("New client connected: {} with ID: {}", addr, client_id);
 
-        let mut connection_service = ConnectionService::new(Arc::clone(&clients), pool);
+        let mut connection_service =
+            ConnectionService::new(Arc::clone(&clients), pool, Arc::clone(&self.encryption));
+
         tokio::spawn(async move {
             if let Err(e) = connection_service
                 .handle_connection(client_id, read_half)
