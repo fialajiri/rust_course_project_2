@@ -12,7 +12,6 @@ use tokio::io::BufReader;
 use tokio::net::tcp::OwnedReadHalf;
 use tracing::{info, warn};
 
-use super::broadcast::MessageBroadcaster;
 use super::processor::MessageProcessor;
 
 #[derive(Clone)]
@@ -98,9 +97,7 @@ impl MessageService {
         }
     }
 
-    pub async fn handle_message(&self, client_id: usize, message: Message) -> Result<()> {
-        let broadcaster = MessageBroadcaster::new(self.clients.clone());
-
+    pub async fn handle_message(&self, message: Message) -> Result<Message> {
         match message {
             Message::Text(encrypted) => {
                 // Decrypt incoming message
@@ -111,10 +108,7 @@ impl MessageService {
                 let encrypted = self.encryption.message().encrypt(&text)?;
                 let encrypted_str = serde_json::to_string(&encrypted)?;
 
-                // Broadcast re-encrypted message
-                broadcaster
-                    .broadcast_message(&Message::Text(encrypted_str))
-                    .await?;
+                Ok(Message::Text(encrypted_str))
             }
             Message::File {
                 name,
@@ -123,7 +117,7 @@ impl MessageService {
             } => {
                 let processed_message =
                     self.handle_binary_data(name, metadata, data, false).await?;
-                broadcaster.broadcast_message(&processed_message).await?;
+                Ok(processed_message)
             }
             Message::Image {
                 name,
@@ -131,23 +125,21 @@ impl MessageService {
                 data,
             } => {
                 let processed_message = self.handle_binary_data(name, metadata, data, true).await?;
-                broadcaster.broadcast_message(&processed_message).await?;
+                Ok(processed_message)
             }
             Message::System(notification) => {
                 // System messages are broadcast without encryption
-                broadcaster
-                    .broadcast_message(&Message::System(notification))
-                    .await?;
+                Ok(Message::System(notification))
             }
             Message::Auth { .. } => {
                 // Auth messages are handled by the processor
-                self.process_message(None, client_id, &message).await?;
+                Ok(message)
             }
             Message::AuthResponse { .. } | Message::Error { .. } => {
                 // These messages are typically sent by the server, not received
                 warn!("Unexpected message type received from client");
+                Ok(message)
             }
         }
-        Ok(())
     }
 }

@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 pub const DEFAULT_HOST: &str = "127.0.0.1";
 pub const DEFAULT_PORT: u16 = 8080;

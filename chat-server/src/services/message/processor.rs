@@ -39,13 +39,17 @@ impl MessageProcessor {
             return self.handle_unauthenticated(client_id).await;
         }
 
+        // Save message to database
         self.save_message_to_db(message, user_id).await?;
 
-        let broadcaster = MessageBroadcaster::new(self.clients.clone());
-        broadcaster.broadcast_message(message).await?;
-
-        // Always send acknowledgment for regular messages
+        // First send acknowledgment to the sender
         self.send_acknowledgment(client_id, message).await?;
+
+        // Then broadcast to all other authenticated users
+        let broadcaster = MessageBroadcaster::new(self.clients.clone());
+        broadcaster
+            .broadcast_message(message, Some(client_id))
+            .await?;
 
         Ok(())
     }

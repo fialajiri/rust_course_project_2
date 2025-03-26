@@ -4,19 +4,24 @@ mod network;
 mod ui;
 
 use anyhow::{Context, Result};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chat_common::{encryption::EncryptionService, Args};
 use clap::Parser;
 use std::{fs, sync::Arc};
 use tokio::net::TcpStream;
-use tracing::info;
+use tracing::{info, warn};
 
 use network::spawn_receiver_task;
 
-const ENCRYPTION_KEY: [u8; 32] = [0; 32];
-
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize tracing first
     tracing_subscriber::fmt::init();
+
+    match dotenvy::dotenv() {
+        Ok(_) => info!("Successfully loaded .env file"),
+        Err(e) => warn!("Failed to load .env file: {}", e),
+    }
 
     let args = Args::parse();
     println!("Connecting to {}", args.addr());
@@ -27,7 +32,18 @@ async fn main() -> Result<()> {
     info!("Connected to {}", args.addr());
 
     // Initialize encryption service
-    let encryption = Arc::new(EncryptionService::new(&ENCRYPTION_KEY)?);
+    let key =
+        std::env::var("ENCRYPTION_KEY").expect("ENCRYPTION_KEY environment variable must be set");
+
+    let key_bytes = BASE64
+        .decode(key)
+        .expect("ENCRYPTION_KEY must be valid base64");
+
+    if key_bytes.len() != 32 {
+        panic!("ENCRYPTION_KEY must be exactly 32 bytes when decoded");
+    }
+
+    let encryption = Arc::new(EncryptionService::new(&key_bytes)?);
 
     // Create directories if they don't exist
     fs::create_dir_all("images").context("Failed to create images directory")?;

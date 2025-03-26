@@ -1,14 +1,13 @@
 use crate::services::connection_service::ConnectionService;
 use crate::types::{AuthState, ChatRoomConnection, Clients};
 use crate::utils::db_connection::DbPool;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chat_common::encryption::EncryptionService;
 use chat_common::error::Result;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tracing::{error, info};
-
-const ENCRYPTION_KEY: [u8; 32] = [0; 32]; // Replace with secure key management
 
 pub struct ClientService {
     clients: Clients,
@@ -19,11 +18,22 @@ pub struct ClientService {
 
 impl ClientService {
     pub fn new(clients: Clients, pool: Arc<DbPool>) -> Result<Self> {
+        let key = std::env::var("ENCRYPTION_KEY")
+            .expect("ENCRYPTION_KEY environment variable must be set");
+
+        let key_bytes = BASE64
+            .decode(key)
+            .expect("ENCRYPTION_KEY must be base64 encoded");
+
+        if key_bytes.len() != 32 {
+            panic!("ENCRYPTION_KEY must be exactly 32 bytes when decoded");
+        }
+
         Ok(Self {
             clients,
             next_id: AtomicUsize::new(1),
             pool,
-            encryption: Arc::new(EncryptionService::new(&ENCRYPTION_KEY)?),
+            encryption: Arc::new(EncryptionService::new(&key_bytes)?),
         })
     }
 

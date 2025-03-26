@@ -39,11 +39,11 @@
   - Detailed error context and chain tracking
   - Better error messages for debugging
 - Implemented comprehensive server-side error handling ✓
-  - Graceful handling of connection failures  
+  - Graceful handling of connection failures
   - Detailed logging of error conditions
 - Added client-side error management ✓
   - New message types for Error and System notifications
-  - User-friendly error messages  
+  - User-friendly error messages
 
 ### Code Structure Improvements
 
@@ -61,7 +61,7 @@
 - Expanded test coverage ✓
   - Unit tests for core functionality
   - Integration tests for client-server communication
-  - Error handling test cases 
+  - Error handling test cases
 
 ## Overview
 
@@ -74,53 +74,104 @@ This project consists of a chat server and client implemented in Rust. The serve
 - **File and image handling**: Received files and images are saved in designated directories.
 - **Command recognition**: The client recognizes special commands like `.file`, `.image`, and `.quit`.
 
+## Homework VIII
+
+### Asynchronous Rewriting Using Tokio
+
+- Refactored both client and server side to use `tokio` ✓
+- All I/O operations, network communications and other tasks are handled by Tokio ✓
+
+### Database Integration
+
+- Added Postgres db using `diesel` database framework ✓
+- Chat messages are now stored in db ✓
+- Setup migration for the db ✓
+
+### User Authentication
+
+- Added `.login` command for user identification and authentication ✓
+- Pre-configured test users available for testing ✓
+- Secure password hashing using bcrypt ✓
+
+### Security Considerations
+
+- Added encryption service to encrypt user messages, files and images ✓
+- Secure password storage with bcrypt hashing ✓
+- Database connection security ✓
+
+### Refactoring
+
+- Both client and server were refactored extensively and code is now better organized ✓
+- Docker Compose setup for easy server and database deployment ✓
+
 ## Usage
 
-### Server
+### Server and Database Setup
 
-To start the server, run the following command:
+The server and database are now managed using Docker Compose. To start them:
 
-`cargo run --bin chat-server -- --addr <hostname>:<port>`
+1. Make sure you have Docker and Docker Compose installed
+2. Navigate to the project root directory
+3. Run:
 
-- Replace `<hostname>` with the desired hostname or IP address.
-- Replace `<port>` with the desired port number.
-- If no address is provided, the server will use default values.
+```bash
+docker compose up -d
+```
+
+This will start both the chat server and PostgreSQL database in containers.
 
 ### Client
 
 To start the client, run the following command:
 
-`cargo run --bin chat-client -- --addr <hostname>:<port>`
+`cargo run --bin chat-client`
 
-- Replace `<hostname>` with the server's hostname or IP address.
-- Replace `<port>` with the server's port number.
-- If no address is provided, the client will use default values.
+### Authentication
+
+Before sending messages, you must authenticate using the `.login` command:
+
+`.login <username> <password>`
+
+Available test users:
+
+- Username: `alice`, Password: `password123`
+- Username: `bob`, Password: `password123`
+- Username: `carol`, Password: `password123`
 
 ### Commands
 
-- **Text Message**: Simply type your message and press Enter to send it.
-- **File**: Use the command `.file <path>` to send a file. Replace `<path>` with the path to the file you want to send.
-- **Image**: Use the command `.image <path>` to send an image. Replace `<path>` with the path to the image you want to send.
-- **Quit**: Use the command `.quit` to disconnect the client from the server.
+- **Login**: Use `.login <username> <password>` to authenticate
+- **Text Message**: Simply type your message and press Enter to send it
+- **File**: Use the command `.file <path>` to send a file. Replace `<path>` with the path to the file you want to send
+- **Image**: Use the command `.image <path>` to send an image. Replace `<path>` with the path to the image you want to send
+- **Quit**: Use the command `.quit` to disconnect the client from the server
 
 ### Directories
 
-- **Images**: Received images are saved in the `images/` directory.
-- **Files**: Received files are saved in the `files/` directory.
+- **Images**: Received images are saved in the `images/` directory
+- **Files**: Received files are saved in the `files/` directory
 
 ## Dependencies
 
-- **anyhow**: For better error handling and adding context to errors.
-- **chrono**: For date and time operations.
-- **clap**: For command-line argument parsing.
-- **image**: For handling image files.
-- **serde**: For serialization and deserialization.
-- **serde_cbor**: For CBOR (Concise Binary Object Representation) serialization.
-- **thiserror**: For creating custom errors.
-- **tempfile**: For managing temporary files and directories.
-- **tracing**: For application-level tracing and logging.
-- **tracing-subscriber**: For collecting and recording tracing data.
-- **Chat Common**: A shared library for message handling and file operations.
+- **anyhow**: For better error handling and adding context to errors
+- **base64**: For encoding and decoding binary data
+- **bcrypt**: For secure password hashing
+- **chrono**: For date and time operations
+- **clap**: For command-line argument parsing
+- **diesel**: For database operations and migrations
+- **diesel-async**: For asynchronous database operations
+- **dotenvy**: For loading environment variables
+- **image**: For handling image files
+- **rand**: For generating random values
+- **serde**: For serialization and deserialization
+- **serde_json**: For JSON serialization/deserialization
+- **serde_cbor**: For CBOR (Concise Binary Object Representation) serialization
+- **thiserror**: For creating custom errors
+- **tempfile**: For managing temporary files and directories
+- **tokio**: For asynchronous runtime and networking
+- **tracing**: For application-level tracing and logging
+- **tracing-subscriber**: For collecting and recording tracing data
+- **Chat Common**: A shared library for message handling and file operations
 
 ## Building
 

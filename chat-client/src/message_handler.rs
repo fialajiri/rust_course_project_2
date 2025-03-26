@@ -19,15 +19,6 @@ impl MessageHandler {
 
     pub async fn handle_incoming(&self, mut stream: OwnedReadHalf) -> Result<()> {
         while let Ok(message) = AsyncMessageStream::read_message(&mut stream).await {
-            match &message {
-                Message::File { data, .. } | Message::Image { data, .. } => {
-                    info!(
-                        "Received message (first 100 bytes): {:?}",
-                        &data[..100.min(data.len())]
-                    );
-                }
-                _ => info!("Received message: {:?}", message),
-            }
             match message {
                 Message::Text(encrypted) => {
                     // Decrypt the message
