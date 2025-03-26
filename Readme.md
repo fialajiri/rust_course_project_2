@@ -63,17 +63,6 @@
   - Integration tests for client-server communication
   - Error handling test cases
 
-## Overview
-
-This project consists of a chat server and client implemented in Rust. The server can handle multiple clients simultaneously, allowing them to send text messages, files, and images to each other. The client can connect to the server, send messages, and receive messages from other clients.
-
-## Features
-
-- **Multi-client support**: The server can handle multiple clients at the same time.
-- **Message types**: Clients can send text messages, files, and images.
-- **File and image handling**: Received files and images are saved in designated directories.
-- **Command recognition**: The client recognizes special commands like `.file`, `.image`, and `.quit`.
-
 ## Homework VIII
 
 ### Asynchronous Rewriting Using Tokio
@@ -103,6 +92,17 @@ This project consists of a chat server and client implemented in Rust. The serve
 
 - Both client and server were refactored extensively and code is now better organized ✓
 - Docker Compose setup for easy server and database deployment ✓
+
+## Overview
+
+This project consists of a chat server and client implemented in Rust. The server can handle multiple clients simultaneously, allowing them to send text messages, files, and images to each other. The client can connect to the server, send messages, and receive messages from other clients.
+
+## Features
+
+- **Multi-client support**: The server can handle multiple clients at the same time.
+- **Message types**: Clients can send text messages, files, and images.
+- **File and image handling**: Received files and images are saved in designated directories.
+- **Command recognition**: The client recognizes special commands like `.file`, `.image`, and `.quit`.
 
 ## Usage
 
