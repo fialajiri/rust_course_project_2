@@ -8,7 +8,20 @@ use tokio::fs;
 use tokio::fs::File;
 use tokio::io::BufReader;
 
-/// Process a file command, validating the file and encrypting it if an encryption service is provided
+/// Processes a file command, handling file validation and optional encryption
+///
+/// This function handles both file and image commands, validating the file exists
+/// and is a regular file. For image commands, it also validates the image format.
+/// If an encryption service is provided, the file will be encrypted before being
+/// sent in the message.
+///
+/// # Arguments
+/// * `command` - The command type (".file" or ".image")
+/// * `path_str` - Path to the file to process
+/// * `encryption` - Optional encryption service for encrypting the file
+///
+/// # Returns
+/// * `Result<Message>` - A message containing the file data or an error if processing fails
 pub async fn process_file_command(
     command: &str,
     path_str: &str,
@@ -67,7 +80,19 @@ pub async fn process_file_command(
     }
 }
 
-/// Encrypt a file and create a message with the encrypted data and metadata
+/// Encrypts a file and creates a message with the encrypted data and metadata
+///
+/// This function handles the encryption of files using the provided encryption service.
+/// The encrypted data is packaged into a message along with the encryption metadata
+/// and the original filename.
+///
+/// # Arguments
+/// * `command` - The command type (".file" or ".image")
+/// * `path_str` - Path to the file to encrypt
+/// * `encryption` - Encryption service for encrypting the file
+///
+/// # Returns
+/// * `Result<Message>` - A message containing the encrypted file data or an error if encryption fails
 pub async fn encrypt_file(
     command: &str,
     path_str: &str,
@@ -108,6 +133,14 @@ pub async fn encrypt_file(
     }
 }
 
+/// Saves a file to the files directory
+///
+/// # Arguments
+/// * `name` - Name of the file to save
+/// * `data` - File contents to save
+///
+/// # Returns
+/// * `Result<()>` - Success or an error if saving fails
 pub async fn save_file(name: &str, data: Vec<u8>) -> Result<()> {
     let path = Path::new("files").join(name);
     create_directory("files").await?;
@@ -115,6 +148,17 @@ pub async fn save_file(name: &str, data: Vec<u8>) -> Result<()> {
     Ok(())
 }
 
+/// Saves an image to the images directory with a timestamp
+///
+/// The image is converted to PNG format and saved with a timestamp in the filename
+/// to prevent overwriting existing images.
+///
+/// # Arguments
+/// * `name` - Original name of the image
+/// * `data` - Image data to save
+///
+/// # Returns
+/// * `Result<()>` - Success or an error if saving fails
 pub async fn save_image(name: &str, data: Vec<u8>) -> Result<()> {
     let img = image::load_from_memory(&data)
         .map_err(|e| ChatError::ImageProcessingError(format!("Failed to process image: {}", e)))?;
@@ -136,12 +180,26 @@ pub async fn save_image(name: &str, data: Vec<u8>) -> Result<()> {
     Ok(())
 }
 
+/// Creates a directory if it doesn't exist
+///
+/// # Arguments
+/// * `path` - Path of the directory to create
+///
+/// # Returns
+/// * `Result<()>` - Success or an error if directory creation fails
 pub async fn create_directory(path: &str) -> Result<()> {
     let path = Path::new(path);
     fs::create_dir_all(path).await?;
     Ok(())
 }
 
+/// Creates an error message from a ChatError
+///
+/// # Arguments
+/// * `error` - The error to convert into a message
+///
+/// # Returns
+/// * `Message` - An error message containing the error code and description
 pub fn create_error_message(error: &ChatError) -> Message {
     Message::Error {
         code: error.to_error_code(),

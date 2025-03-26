@@ -8,19 +8,31 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
+/// Size of chunks used for file encryption/decryption operations
 const CHUNK_SIZE: usize = 1024 * 64; // 64KB chunks
 
+/// Metadata required for file decryption
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptedFileMetadata {
-    pub nonce: String,      // Base64 encoded nonce
-    pub original_size: u64, // Original file size
+    /// Base64 encoded nonce used for encryption
+    pub nonce: String,
+    /// Original size of the file before encryption
+    pub original_size: u64,
 }
 
+/// Handles file encryption and decryption using AES-256-GCM
 pub struct FileEncryption {
     cipher: Aes256Gcm,
 }
 
 impl FileEncryption {
+    /// Creates a new FileEncryption instance with the provided key
+    ///
+    /// # Arguments
+    /// * `key` - A 32-byte key for AES-256-GCM encryption
+    ///
+    /// # Returns
+    /// * `Result<Self>` - A new FileEncryption instance or an error if the key length is invalid
     pub fn new(key: &[u8]) -> Result<Self> {
         if key.len() != 32 {
             return Err(anyhow!("Key must be exactly 32 bytes"));
@@ -32,7 +44,14 @@ impl FileEncryption {
         Ok(Self { cipher })
     }
 
-    /// Encrypt a file stream
+    /// Encrypts a file stream using AES-256-GCM
+    ///
+    /// # Arguments
+    /// * `reader` - Async reader providing the input data
+    /// * `writer` - Async writer for the encrypted output
+    ///
+    /// # Returns
+    /// * `Result<EncryptedFileMetadata>` - Metadata required for decryption or an error if encryption fails
     pub async fn encrypt_stream<R, W>(
         &self,
         mut reader: R,
@@ -72,7 +91,15 @@ impl FileEncryption {
         })
     }
 
-    /// Decrypt a file stream
+    /// Decrypts a file stream using AES-256-GCM
+    ///
+    /// # Arguments
+    /// * `reader` - Async reader providing the encrypted data
+    /// * `writer` - Async writer for the decrypted output
+    /// * `metadata` - Metadata containing the nonce and original file size
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or an error if decryption fails
     pub async fn decrypt_stream<R, W>(
         &self,
         mut reader: R,
@@ -88,7 +115,7 @@ impl FileEncryption {
             .map_err(|e| anyhow!("Invalid base64 nonce: {}", e))?;
         let nonce = Nonce::from_slice(&nonce_bytes);
 
-        let mut buffer = vec![0u8; CHUNK_SIZE + 16]; // Additional space for AES-GCM tag
+        let mut buffer = vec![0u8; CHUNK_SIZE + 16];
         let mut bytes_remaining = metadata.original_size;
 
         while bytes_remaining > 0 {

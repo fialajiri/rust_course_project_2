@@ -2,17 +2,34 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use thiserror::Error;
 
+/// Error codes that can be returned by the chat application
+///
+/// These codes provide a high-level categorization of errors that can occur
+/// during chat operations. They are designed to be serializable and can be
+/// transmitted over the network.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ErrorCode {
+    /// File requested was not found
     FileNotFound,
+    /// Operation was denied due to insufficient permissions
     PermissionDenied,
+    /// Input provided was invalid or malformed
     InvalidInput,
+    /// An error occurred on the server side
     ServerError,
+    /// A network-related error occurred
     NetworkError,
+    /// An error occurred while processing an image
     ImageProcessingError,
+    /// An unknown or unexpected error occurred
     UnknownError,
 }
 
+/// Detailed error types that can occur in the chat application
+///
+/// This enum provides specific error information with descriptive messages.
+/// It implements the `Error` trait and can be converted to `ErrorCode` for
+/// network transmission.
 #[derive(Error, Debug)]
 pub enum ChatError {
     #[error("File not found: {0}")]
@@ -50,6 +67,10 @@ pub enum ChatError {
 }
 
 impl ChatError {
+    /// Converts a detailed error into a network-transmittable error code
+    ///
+    /// # Returns
+    /// * `ErrorCode` - The corresponding error code for network transmission
     pub fn to_error_code(&self) -> ErrorCode {
         match self {
             ChatError::NotFound(_) => ErrorCode::FileNotFound,
@@ -84,4 +105,5 @@ impl From<serde_json::Error> for ChatError {
     }
 }
 
+/// A type alias for Result using ChatError as the error type
 pub type Result<T> = std::result::Result<T, ChatError>;

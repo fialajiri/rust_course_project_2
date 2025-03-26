@@ -3,9 +3,26 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
 
+/// A trait for asynchronous message streaming over various network connections
+///
+/// This trait provides a unified interface for reading and writing messages
+/// over different types of network streams. Messages are serialized using CBOR
+/// and prefixed with a 4-byte length in big-endian format.
 #[async_trait::async_trait]
 pub trait AsyncMessageStream {
+    /// Reads a message from the stream
+    ///
+    /// # Returns
+    /// * `Result<Message>` - The deserialized message or an error if reading fails
     async fn read_message(&mut self) -> Result<Message>;
+
+    /// Writes a message to the stream
+    ///
+    /// # Arguments
+    /// * `message` - The message to write
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or an error if writing fails
     async fn write_message(&mut self, message: &Message) -> Result<()>;
 }
 

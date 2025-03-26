@@ -7,18 +7,28 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
+/// Represents an encrypted message with its associated metadata
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptedMessage {
-    pub ciphertext: String, // Base64 encoded encrypted data
-    pub nonce: String,      // Base64 encoded nonce
+    /// Base64 encoded encrypted data
+    pub ciphertext: String,
+    /// Base64 encoded nonce used for encryption
+    pub nonce: String,
 }
 
+/// Handles message encryption and decryption using AES-256-GCM
 pub struct MessageEncryption {
     cipher: Aes256Gcm,
 }
 
 impl MessageEncryption {
-    /// Create a new instance with a provided encryption key
+    /// Creates a new MessageEncryption instance with the provided key
+    ///
+    /// # Arguments
+    /// * `key` - A 32-byte key for AES-256-GCM encryption
+    ///
+    /// # Returns
+    /// * `Result<Self>` - A new MessageEncryption instance or an error if the key length is invalid
     pub fn new(key: &[u8]) -> Result<Self> {
         if key.len() != 32 {
             return Err(anyhow!("Key must be exactly 32 bytes"));
@@ -30,14 +40,23 @@ impl MessageEncryption {
         Ok(Self { cipher })
     }
 
-    /// Generate a new random encryption key
+    /// Generates a new random encryption key suitable for AES-256-GCM
+    ///
+    /// # Returns
+    /// * `[u8; 32]` - A 32-byte array containing the randomly generated key
     pub fn generate_key() -> [u8; 32] {
         let mut key = [0u8; 32];
         OsRng.fill_bytes(&mut key);
         key
     }
 
-    /// Encrypt a message
+    /// Encrypts a message using AES-256-GCM
+    ///
+    /// # Arguments
+    /// * `message` - The plaintext message to encrypt
+    ///
+    /// # Returns
+    /// * `Result<EncryptedMessage>` - The encrypted message with its metadata or an error if encryption fails
     pub fn encrypt(&self, message: &str) -> Result<EncryptedMessage> {
         let mut nonce_bytes = [0u8; 12];
         OsRng.fill_bytes(&mut nonce_bytes);
@@ -54,7 +73,13 @@ impl MessageEncryption {
         })
     }
 
-    /// Decrypt a message
+    /// Decrypts a message using AES-256-GCM
+    ///
+    /// # Arguments
+    /// * `encrypted` - The encrypted message with its metadata
+    ///
+    /// # Returns
+    /// * `Result<String>` - The decrypted plaintext message or an error if decryption fails
     pub fn decrypt(&self, encrypted: &EncryptedMessage) -> Result<String> {
         let ciphertext = BASE64
             .decode(&encrypted.ciphertext)
