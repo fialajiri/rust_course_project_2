@@ -23,6 +23,20 @@ impl CommandProcessor {
         Self { encryption }
     }
 
+    /// Parses a command string into a Command enum.
+    ///
+    /// The function supports the following commands:
+    /// - `.quit` - Exits the chat
+    /// - `.login <username> <password>` - Authenticates the user
+    /// - `.file <path>` - Sends a file
+    /// - `.image <path>` - Sends an image
+    /// - Any other text (without leading dot) is treated as a text message
+    ///
+    /// # Arguments
+    /// * `input` - The command string to parse
+    ///
+    /// # Returns
+    /// A Command enum variant representing the parsed command
     pub fn parse_command(&self, input: &str) -> Command {
         if input == ".quit" {
             return Command::Quit;
@@ -89,5 +103,123 @@ impl CommandProcessor {
                 Ok(Some(file_ops::create_error_message(&e)))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chat_common::encryption::EncryptionService;
+
+    fn create_processor() -> CommandProcessor {
+        let test_key = [0u8; 32]; // Test key for encryption
+        CommandProcessor::new(Arc::new(EncryptionService::new(&test_key).unwrap()))
+    }
+
+    #[test]
+    fn test_parse_quit_command() {
+        let processor = create_processor();
+        assert!(matches!(processor.parse_command(".quit"), Command::Quit));
+    }
+
+    #[test]
+    fn test_parse_login_command() {
+        let processor = create_processor();
+        let cmd = processor.parse_command(".login user pass");
+        match cmd {
+            Command::Auth { username, password } => {
+                assert_eq!(username, "user");
+                assert_eq!(password, "pass");
+            }
+            _ => panic!("Expected Auth command"),
+        }
+    }
+
+    #[test]
+    fn test_parse_invalid_login_command() {
+        let processor = create_processor();
+        assert!(matches!(
+            processor.parse_command(".login"),
+            Command::Invalid
+        ));
+        assert!(matches!(
+            processor.parse_command(".login user"),
+            Command::Invalid
+        ));
+        assert!(matches!(
+            processor.parse_command(".login user pass extra"),
+            Command::Invalid
+        ));
+    }
+
+    #[test]
+    fn test_parse_file_command() {
+        let processor = create_processor();
+        let cmd = processor.parse_command(".file test.txt");
+        match cmd {
+            Command::File(path) => assert_eq!(path, "test.txt"),
+            _ => panic!("Expected File command"),
+        }
+    }
+
+    #[test]
+    fn test_parse_empty_file_command() {
+        let processor = create_processor();
+        assert!(matches!(processor.parse_command(".file"), Command::Invalid));
+        assert!(matches!(
+            processor.parse_command(".file "),
+            Command::Invalid
+        ));
+    }
+
+    #[test]
+    fn test_parse_image_command() {
+        let processor = create_processor();
+        let cmd = processor.parse_command(".image photo.jpg");
+        match cmd {
+            Command::Image(path) => assert_eq!(path, "photo.jpg"),
+            _ => panic!("Expected Image command"),
+        }
+    }
+
+    #[test]
+    fn test_parse_empty_image_command() {
+        let processor = create_processor();
+        assert!(matches!(
+            processor.parse_command(".image"),
+            Command::Invalid
+        ));
+        assert!(matches!(
+            processor.parse_command(".image "),
+            Command::Invalid
+        ));
+    }
+
+    #[test]
+    fn test_parse_text_command() {
+        let processor = create_processor();
+        let cmd = processor.parse_command("Hello, World!");
+        match cmd {
+            Command::Text(text) => assert_eq!(text, "Hello, World!"),
+            _ => panic!("Expected Text command"),
+        }
+    }
+
+    #[test]
+    fn test_parse_invalid_command() {
+        let processor = create_processor();
+        assert!(matches!(
+            processor.parse_command(".invalid"),
+            Command::Invalid
+        ));
+        assert!(matches!(
+            processor.parse_command(".unknown"),
+            Command::Invalid
+        ));
+        assert!(matches!(processor.parse_command(".file"), Command::Invalid));
+        assert!(matches!(
+            processor.parse_command(".image"),
+            Command::Invalid
+        ));
     }
 }
