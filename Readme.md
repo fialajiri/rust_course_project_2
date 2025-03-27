@@ -93,6 +93,28 @@
 - Both client and server were refactored extensively and code is now better organized ✓
 - Docker Compose setup for easy server and database deployment ✓
 
+## Homework IX
+
+### Documentation Improvements
+
+- Added comprehensive doc-comments to key functions and modules ✓
+  - Clear and concise descriptions of functionality
+  - Documented complex and non-obvious components
+  - Enhanced code readability and maintainability
+
+### Testing Enhancements
+
+- Implemented strategic test coverage ✓
+  - Added unit tests for critical functions
+  - Utilized Rust's built-in testing framework
+
+### Testing Philosophy
+
+- Focused on testing crucial components ✓
+  - Prioritized testing of complex logic
+  - Demonstrated understanding of Rust testing principles
+  - Balanced coverage with practical considerations
+
 ## Overview
 
 This project consists of a chat server and client implemented in Rust. The server can handle multiple clients simultaneously, allowing them to send text messages, files, and images to each other. The client can connect to the server, send messages, and receive messages from other clients.
