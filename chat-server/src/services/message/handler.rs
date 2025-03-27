@@ -1,3 +1,9 @@
+//! Message handling service for the chat server.
+//!
+//! This module handles incoming messages, processes them, and manages client connections.
+//! It handles various types of messages including text, files, images, and system messages,
+//! with appropriate encryption/decryption for secure communication.
+
 use std::sync::Arc;
 
 use crate::types::Clients;
@@ -14,6 +20,10 @@ use tracing::{info, warn};
 
 use super::processor::MessageProcessor;
 
+/// Service responsible for handling incoming messages and managing client connections.
+///
+/// The `MessageService` processes different types of messages, handles client disconnections,
+/// and manages encrypted communication between clients.
 #[derive(Clone)]
 pub struct MessageService {
     clients: Clients,
@@ -22,6 +32,12 @@ pub struct MessageService {
 }
 
 impl MessageService {
+    /// Creates a new `MessageService` instance.
+    ///
+    /// # Arguments
+    /// * `clients` - A shared collection of connected clients
+    /// * `pool` - A shared database connection pool
+    /// * `encryption` - A shared encryption service for secure communication
     pub fn new(clients: Clients, pool: Arc<DbPool>, encryption: Arc<EncryptionService>) -> Self {
         Self {
             clients,
@@ -30,6 +46,15 @@ impl MessageService {
         }
     }
 
+    /// Processes an incoming message using the message processor.
+    ///
+    /// # Arguments
+    /// * `stream` - Optional TCP stream for reading additional data (used for file/image transfers)
+    /// * `client_id` - The ID of the client sending the message
+    /// * `message` - The message to process
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if the message was processed successfully, Err otherwise
     pub async fn process_message(
         &self,
         stream: Option<&OwnedReadHalf>,
@@ -40,6 +65,13 @@ impl MessageService {
         processor.process(stream, client_id, message).await
     }
 
+    /// Handles client disconnection and notifies other clients.
+    ///
+    /// # Arguments
+    /// * `client_id` - The ID of the disconnecting client
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if the disconnection was handled successfully, Err otherwise
     pub async fn handle_disconnect(&self, client_id: usize) -> Result<()> {
         let mut clients = self.clients.lock().await;
         clients.remove(&client_id);
@@ -56,7 +88,16 @@ impl MessageService {
         Ok(())
     }
 
-    // Helper method to handle both File and Image messages
+    /// Processes binary data (files or images) with encryption/decryption.
+    ///
+    /// # Arguments
+    /// * `name` - The name of the file/image
+    /// * `metadata` - Encrypted metadata for the file/image
+    /// * `data` - The encrypted binary data
+    /// * `is_image` - Whether the data represents an image
+    ///
+    /// # Returns
+    /// * `Result<Message>` - The processed message with re-encrypted data, or an error
     async fn handle_binary_data(
         &self,
         name: String,
@@ -97,6 +138,20 @@ impl MessageService {
         }
     }
 
+    /// Handles an incoming message, processing it according to its type.
+    ///
+    /// # Arguments
+    /// * `message` - The message to handle
+    ///
+    /// # Returns
+    /// * `Result<Message>` - The processed message ready for broadcasting, or an error
+    ///
+    /// # Message Type Behavior
+    /// * Text messages: Decrypted and re-encrypted for each recipient
+    /// * File/Image messages: Decrypted, processed, and re-encrypted
+    /// * System messages: Passed through without encryption
+    /// * Auth messages: Passed through for processing
+    /// * AuthResponse/Error messages: Logged as unexpected
     pub async fn handle_message(&self, message: Message) -> Result<Message> {
         match message {
             Message::Text(encrypted) => {
@@ -141,5 +196,161 @@ impl MessageService {
                 Ok(message)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chat_common::Message;
+    use diesel_async::pooled_connection::deadpool::Pool;
+    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+    use diesel_async::AsyncPgConnection;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    async fn setup_test_services() -> (Arc<DbPool>, Arc<EncryptionService>) {
+        // Create a test encryption service with a test key
+        let key = [0u8; 32]; // Test key (all zeros)
+        let encryption = Arc::new(EncryptionService::new(&key).unwrap());
+
+        // Create a minimal mock pool (we don't actually need it for these tests)
+        let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(
+            "postgres://test:test@localhost/test",
+        );
+        let pool = Pool::builder(config).max_size(1).build().unwrap();
+        let pool = Arc::new(pool);
+
+        (pool, encryption)
+    }
+
+    #[tokio::test]
+    async fn test_handle_text_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+        let encryption_clone = Arc::clone(&encryption);
+
+        let service = MessageService::new(clients, pool, encryption);
+
+        // Create an encrypted message
+        let encrypted = encryption_clone.message().encrypt("Test message").unwrap();
+        let encrypted_str = serde_json::to_string(&encrypted).unwrap();
+        let message = Message::Text(encrypted_str);
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_system_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+
+        let service = MessageService::new(clients, pool, encryption);
+        let message = Message::System("System notification".to_string());
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_auth_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+
+        let service = MessageService::new(clients, pool, encryption);
+        let message = Message::Auth {
+            username: "test".to_string(),
+            password: "test".to_string(),
+        };
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_file_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+        let encryption_clone = Arc::clone(&encryption);
+
+        let service = MessageService::new(clients, pool, encryption);
+
+        // Create test data and encrypt it
+        let test_data = vec![1, 2, 3, 4, 5];
+        let mut encrypted_data = Vec::new();
+        let metadata = encryption_clone
+            .file()
+            .encrypt_stream(BufReader::new(&test_data[..]), &mut encrypted_data)
+            .await
+            .unwrap();
+
+        let message = Message::File {
+            name: "test.txt".to_string(),
+            metadata: serde_json::to_value(metadata).unwrap(),
+            data: encrypted_data,
+        };
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_image_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+        let encryption_clone = Arc::clone(&encryption);
+
+        let service = MessageService::new(clients, pool, encryption);
+
+        // Create test data and encrypt it
+        let test_data = vec![1, 2, 3, 4, 5];
+        let mut encrypted_data = Vec::new();
+        let metadata = encryption_clone
+            .file()
+            .encrypt_stream(BufReader::new(&test_data[..]), &mut encrypted_data)
+            .await
+            .unwrap();
+
+        let message = Message::Image {
+            name: "test.png".to_string(),
+            metadata: serde_json::to_value(metadata).unwrap(),
+            data: encrypted_data,
+        };
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_error_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+
+        let service = MessageService::new(clients, pool, encryption);
+        let message = Message::Error {
+            code: chat_common::ErrorCode::PermissionDenied,
+            message: "Test error".to_string(),
+        };
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_auth_response_message() {
+        let clients = Arc::new(Mutex::new(HashMap::new()));
+        let (pool, encryption) = setup_test_services().await;
+
+        let service = MessageService::new(clients, pool, encryption);
+        let message = Message::AuthResponse {
+            success: true,
+            token: Some("test_token".to_string()),
+            message: "Authentication successful".to_string(),
+        };
+
+        let result = service.handle_message(message).await;
+        assert!(result.is_ok());
     }
 }

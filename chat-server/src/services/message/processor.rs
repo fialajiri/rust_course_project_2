@@ -1,3 +1,8 @@
+//! Message processing service for the chat server.
+//!
+//! This module handles the processing of messages, including authentication,
+//! message persistence, and message broadcasting to appropriate clients.
+
 use std::sync::Arc;
 
 use crate::models::message::{MessageType, NewMessage};
@@ -13,16 +18,44 @@ use tracing::{error, info};
 
 use super::broadcast::MessageBroadcaster;
 
+/// Service responsible for processing incoming messages and managing message flow.
+///
+/// The `MessageProcessor` handles message authentication, persistence, and broadcasting.
+/// It ensures messages are properly saved to the database and delivered to appropriate clients.
 pub(super) struct MessageProcessor {
     clients: Clients,
     pool: Arc<DbPool>,
 }
 
 impl MessageProcessor {
+    /// Creates a new `MessageProcessor` instance.
+    ///
+    /// # Arguments
+    /// * `clients` - A shared collection of connected clients
+    /// * `pool` - A shared database connection pool
     pub fn new(clients: Clients, pool: Arc<DbPool>) -> Self {
         Self { clients, pool }
     }
 
+    /// Processes an incoming message, handling authentication and broadcasting.
+    ///
+    /// # Arguments
+    /// * `stream` - Optional TCP stream for reading additional data (used for file/image transfers)
+    /// * `client_id` - The ID of the client sending the message
+    /// * `message` - The message to process
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if the message was processed successfully, Err otherwise
+    ///
+    /// # Message Processing Flow
+    /// 1. Authentication messages are handled separately
+    /// 2. For other messages, client authentication is verified
+    /// 3. If authenticated:
+    ///    - Message is saved to database
+    ///    - Acknowledgment is sent to sender
+    ///    - Message is broadcast to other authenticated clients
+    /// 4. If not authenticated:
+    ///    - Error message is sent to client
     pub async fn process(
         &self,
         _stream: Option<&OwnedReadHalf>,
@@ -54,6 +87,13 @@ impl MessageProcessor {
         Ok(())
     }
 
+    /// Retrieves the authentication status and user ID for a client.
+    ///
+    /// # Arguments
+    /// * `client_id` - The ID of the client to check
+    ///
+    /// # Returns
+    /// * `Result<(bool, i32)>` - Tuple containing (is_authenticated, user_id)
     async fn get_auth_status(&self, client_id: usize) -> Result<(bool, i32)> {
         let clients = self.clients.lock().await;
         let client = clients
@@ -66,6 +106,13 @@ impl MessageProcessor {
         ))
     }
 
+    /// Handles unauthenticated client messages by sending an error response.
+    ///
+    /// # Arguments
+    /// * `client_id` - The ID of the unauthenticated client
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if the error was sent successfully, Err otherwise
     async fn handle_unauthenticated(&self, client_id: usize) -> Result<()> {
         let mut clients = self.clients.lock().await;
         if let Some(client) = clients.get_mut(&client_id) {
@@ -78,6 +125,14 @@ impl MessageProcessor {
         Ok(())
     }
 
+    /// Saves a message to the database.
+    ///
+    /// # Arguments
+    /// * `message` - The message to save
+    /// * `user_id` - The ID of the user sending the message
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if the message was saved successfully, Err otherwise
     async fn save_message_to_db(&self, message: &Message, user_id: i32) -> Result<()> {
         let conn = &mut *self.pool.get().await?;
 
@@ -113,6 +168,14 @@ impl MessageProcessor {
         Ok(())
     }
 
+    /// Sends an acknowledgment message to the sender.
+    ///
+    /// # Arguments
+    /// * `client_id` - The ID of the client to send the acknowledgment to
+    /// * `message` - The original message that was processed
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if the acknowledgment was sent successfully, Err otherwise
     async fn send_acknowledgment(&self, client_id: usize, message: &Message) -> Result<()> {
         let ack_message = match message {
             Message::Text(_) => Some(Message::System("Message sent successfully".to_string())),
@@ -139,6 +202,15 @@ impl MessageProcessor {
         Ok(())
     }
 
+    /// Handles client authentication.
+    ///
+    /// # Arguments
+    /// * `client_id` - The ID of the client to authenticate
+    /// * `username` - The username provided for authentication
+    /// * `password` - The password provided for authentication
+    ///
+    /// # Returns
+    /// * `Result<()>` - Ok if authentication was processed successfully, Err otherwise
     async fn handle_auth(&self, client_id: usize, username: &str, password: &str) -> Result<()> {
         let auth_service = AuthService::new(self.pool.clone());
 
