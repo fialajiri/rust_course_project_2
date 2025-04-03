@@ -1,6 +1,6 @@
 use crate::components::user::CreateUserForm;
 use crate::models::User;
-use crate::services::{FetchError, UserService};
+use crate::services::{FetchError, MessageService, UserService};
 use gloo_dialogs;
 use yew::prelude::*;
 
@@ -73,7 +73,9 @@ pub fn users_list() -> Html {
                 })
             };
 
-            UserService::delete_user(user_id, callback);
+            let callback2 = callback.clone();
+            MessageService::delete_messages_by_user(user_id, callback);
+            UserService::delete_user(user_id, callback2);
         })
     };
 

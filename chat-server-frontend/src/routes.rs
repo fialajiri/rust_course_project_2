@@ -1,11 +1,12 @@
+use gloo_storage::{LocalStorage, Storage};
 use yew::prelude::*;
 use yew_router::prelude::*;
-
-use crate::pages::{HomePage, MessagesPage, UsersPage};
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum AppRoute {
     #[at("/")]
+    Login,
+    #[at("/home")]
     Home,
     #[at("/users")]
     Users,
@@ -16,11 +17,21 @@ pub enum AppRoute {
     NotFound,
 }
 
-pub fn switch(routes: AppRoute) -> Html {
-    match routes {
-        AppRoute::Home => html! { <HomePage /> },
-        AppRoute::Users => html! { <UsersPage /> },
-        AppRoute::Messages => html! { <MessagesPage /> },
-        AppRoute::NotFound => html! { <h1>{"404 - Page Not Found"}</h1> },
+pub fn switch(route: AppRoute) -> Html {
+    match route {
+        AppRoute::Login => html! { <crate::pages::login::LoginPage /> },
+        AppRoute::Home | AppRoute::Users | AppRoute::Messages => {
+            if LocalStorage::get::<String>("token").is_ok() {
+                match route {
+                    AppRoute::Home => html! { <crate::pages::home::HomePage /> },
+                    AppRoute::Users => html! { <crate::pages::users::UsersPage /> },
+                    AppRoute::Messages => html! { <crate::pages::messages::MessagesPage /> },
+                    _ => unreachable!(),
+                }
+            } else {
+                html! { <Redirect<AppRoute> to={AppRoute::Login} /> }
+            }
+        }
+        AppRoute::NotFound => html! { <h1>{"404 - Not Found"}</h1> },
     }
 }

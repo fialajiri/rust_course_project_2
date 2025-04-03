@@ -45,7 +45,7 @@ pub fn create_user_form(props: &CreateUserFormProps) -> Html {
             let target = e.target_dyn_into::<HtmlInputElement>();
             if let Some(input) = target {
                 let mut updated_user = (*new_user).clone();
-                updated_user.password_hash = input.value();
+                updated_user.password = input.value();
                 new_user.set(updated_user);
             }
         })
@@ -65,7 +65,7 @@ pub fn create_user_form(props: &CreateUserFormProps) -> Html {
             // Validate
             if new_user_data.username.is_empty()
                 || new_user_data.email.is_empty()
-                || new_user_data.password_hash.is_empty()
+                || new_user_data.password.is_empty()
             {
                 error.set(Some("All fields are required".to_string()));
                 return;
@@ -149,7 +149,7 @@ pub fn create_user_form(props: &CreateUserFormProps) -> Html {
                             type="password"
                             class="form-control"
                             id="password"
-                            value={new_user.password_hash.clone()}
+                            value={new_user.password.clone()}
                             onchange={on_password_change}
                             disabled={*submitting}
                         />
