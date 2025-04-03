@@ -7,4 +7,7 @@
 /chat-common/Cargo.lock
 /chat-client/target
 /chat-client/Cargo.lock
+/chat-server-frontend/target
+/chat-server-frontend/Cargo.lock
+/chat-server-frontend/dist
 Cargo.lock

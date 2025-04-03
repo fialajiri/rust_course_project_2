@@ -1,15 +1,16 @@
 use crate::errors::rocket_server_errors::server_error;
 use crate::models::message::{Message, NewMessage};
+use crate::models::user::User;
 use crate::repositories::message::MessageRepository;
 use crate::utils::db_connection::DbConn;
 use rocket::http::Status;
 use rocket::response::status::Custom;
 use rocket::serde::json::{json, Json, Value};
-use rocket::{delete, get, post, put, routes};
+use rocket::{delete, get, options, post, put, routes};
 use rocket_db_pools::Connection;
 
 #[get("/")]
-pub async fn get_messages(mut db: Connection<DbConn>) -> Result<Custom<Value>, Custom<Value>> {
+pub async fn get_messages(mut db: Connection<DbConn>, _user: User) -> Result<Custom<Value>, Custom<Value>> {
     MessageRepository::find_all(&mut *db)
         .await
         .map(|event| Custom(Status::Ok, json!(event)))
@@ -83,6 +84,11 @@ pub async fn delete_messages_by_user(
         .map_err(|e| server_error(e.into()))
 }
 
+#[options("/<_..>")]
+pub fn options() -> &'static str {
+    ""
+}
+
 pub fn routes() -> Vec<rocket::Route> {
     routes![
         get_messages,
@@ -91,6 +97,7 @@ pub fn routes() -> Vec<rocket::Route> {
         create_message,
         update_message,
         delete_message,
-        delete_messages_by_user
+        delete_messages_by_user,
+        options
     ]
 }

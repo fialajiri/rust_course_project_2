@@ -61,7 +61,11 @@ impl MessageService {
         client_id: usize,
         message: &Message,
     ) -> Result<()> {
-        let processor = MessageProcessor::new(self.clients.clone(), Arc::clone(&self.pool));
+        let processor = MessageProcessor::new(
+            self.clients.clone(),
+            Arc::clone(&self.pool),
+            Arc::clone(&self.encryption),
+        );
         processor.process(stream, client_id, message).await
     }
 

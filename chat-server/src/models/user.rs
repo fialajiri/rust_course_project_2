@@ -16,10 +16,27 @@ pub struct User {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Insertable, Deserialize)]
+#[derive(Deserialize)]
+pub struct NewUserRequest {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Insertable)]
 #[diesel(table_name = users)]
 pub struct NewUser {
     pub username: String,
     pub email: String,
     pub password_hash: String,
+}
+
+impl From<NewUserRequest> for NewUser {
+    fn from(request: NewUserRequest) -> Self {
+        Self {
+            username: request.username,
+            email: request.email,
+            password_hash: request.password, // This will be hashed in the repository
+        }
+    }
 }

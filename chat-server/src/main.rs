@@ -1,9 +1,11 @@
 use anyhow::{Context, Result as AnyhowResult};
 use chat_common::error::ChatError;
+use chat_server::routes::authorization;
 use chat_server::routes::messages;
 use chat_server::routes::users;
 use chat_server::services::client_service::ClientService;
 use chat_server::utils::cors::Cors;
+use chat_server::utils::db_connection::CacheConn;
 use chat_server::utils::db_connection::{self, DbConn};
 use rocket_db_pools::Database;
 use std::collections::HashMap;
@@ -42,9 +44,11 @@ async fn main() -> AnyhowResult<()> {
     tokio::spawn(async move {
         let _rocket = rocket::build()
             .attach(DbConn::init())
+            .attach(CacheConn::init())
             .attach(Cors)
             .mount("/users", users::routes())
             .mount("/messages", messages::routes())
+            .mount("/auth", authorization::routes())
             .launch()
             .await
             .expect("Failed to launch Rocket server");

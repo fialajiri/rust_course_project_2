@@ -22,3 +22,7 @@ pub async fn create_pool() -> Result<DbPool> {
 
     Ok(pool)
 }
+
+#[derive(rocket_db_pools::Database)]
+#[database("redis")]
+pub struct CacheConn(rocket_db_pools::deadpool_redis::Pool);

@@ -1,5 +1,5 @@
 use crate::errors::rocket_server_errors::server_error;
-use crate::models::user::{NewUser, User};
+use crate::models::user::{NewUser, NewUserRequest, User};
 use crate::repositories::user::UserRepository;
 use crate::utils::db_connection::DbConn;
 use rocket::http::Status;
@@ -26,7 +26,7 @@ pub async fn get_user(id: i32, mut db: Connection<DbConn>) -> Result<Custom<Valu
 
 #[post("/", data = "<new_user>")]
 pub async fn create_user(
-    new_user: Json<NewUser>,
+    new_user: Json<NewUserRequest>,
     mut db: Connection<DbConn>,
 ) -> Result<Custom<Value>, Custom<Value>> {
     UserRepository::create(&mut *db, new_user.into_inner())

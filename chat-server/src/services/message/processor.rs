@@ -11,6 +11,7 @@ use crate::types::{AuthState, Clients};
 use crate::utils::db_connection::DbPool;
 use anyhow::Result;
 use chat_common::async_message_stream::AsyncMessageStream;
+use chat_common::encryption::EncryptionService;
 use chat_common::{ErrorCode, Message};
 use diesel_async::RunQueryDsl;
 use tokio::net::tcp::OwnedReadHalf;
@@ -25,6 +26,7 @@ use super::broadcast::MessageBroadcaster;
 pub(super) struct MessageProcessor {
     clients: Clients,
     pool: Arc<DbPool>,
+    encryption: Arc<EncryptionService>,
 }
 
 impl MessageProcessor {
@@ -33,8 +35,13 @@ impl MessageProcessor {
     /// # Arguments
     /// * `clients` - A shared collection of connected clients
     /// * `pool` - A shared database connection pool
-    pub fn new(clients: Clients, pool: Arc<DbPool>) -> Self {
-        Self { clients, pool }
+    /// * `encryption` - A shared encryption service for secure communication
+    pub fn new(clients: Clients, pool: Arc<DbPool>, encryption: Arc<EncryptionService>) -> Self {
+        Self {
+            clients,
+            pool,
+            encryption,
+        }
     }
 
     /// Processes an incoming message, handling authentication and broadcasting.
@@ -137,12 +144,19 @@ impl MessageProcessor {
         let conn = &mut *self.pool.get().await?;
 
         let new_message = match message {
-            Message::Text(content) => Some(NewMessage {
-                sender_id: user_id,
-                message_type: MessageType::Text,
-                content: Some(content.clone()),
-                file_name: None,
-            }),
+            Message::Text(content) => {
+                // Decrypt the text message before saving
+                let encrypted: chat_common::encryption::message::EncryptedMessage =
+                    serde_json::from_str(content)?;
+                let decrypted = self.encryption.message().decrypt(&encrypted)?;
+
+                Some(NewMessage {
+                    sender_id: user_id,
+                    message_type: MessageType::Text,
+                    content: Some(decrypted),
+                    file_name: None,
+                })
+            }
             Message::File { name, .. } => Some(NewMessage {
                 sender_id: user_id,
                 message_type: MessageType::File,
