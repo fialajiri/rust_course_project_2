@@ -28,7 +28,7 @@ services:
       - ROCKET_ADDRESS=0.0.0.0
       - ROCKET_PORT=8001
       - DATABASE_URL=postgres://postgres:postgres@postgres/chat_db
-      - | 
+      - |
         ROCKET_DATABASES={
         postgres={url=postgres://postgres:postgres@postgres/chat_db},
         redis={url=redis://redis:6379}
@@ -45,3 +45,14 @@ services:
       postgres:
         condition: service_healthy
     command: sh -c "diesel migration run && cargo watch --why -x run"
+
+  frontend:
+    build:
+      context: ./chat-server-frontend
+      dockerfile: Dockerfile
+    ports:
+      - '80:80'
+    environment:
+      - API_BASE_URL=http://localhost:8001
+    depends_on:
+      - server

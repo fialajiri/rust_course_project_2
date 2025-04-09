@@ -5,7 +5,7 @@ use gloo_storage::{LocalStorage, Storage};
 use wasm_bindgen_futures::spawn_local;
 use yew::Callback;
 
-const API_BASE_URL: &str = "http://127.0.0.1:8001";
+const API_BASE_URL: &str = "http://localhost:8001";
 
 pub struct MessageService;
 
