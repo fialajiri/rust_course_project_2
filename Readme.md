@@ -1,123 +1,42 @@
-<!-- @format -->
-
 # Rust Developer Course
 
-## Homework V
+## Homework X
 
-- Design the server to receive messages from multiple clients ✓
-- Accept port and hostname as parameters ✓
-- If none are provided, set default port and hostname ✓
-- Clients should connect to server and send messages ✓
-- Clients should accept port and hostname parameters ✓
-- Clients should read from stdin and recognize distinct messages ✓
-- Recognized message should be .image and .file ✓
-- The .quit command terminates the client ✓
-- When the client receives images, save them in the images/ directory, naming them &lt;timestamp&gt;.png. ✓
-- Here I improve the solution and kept the original image name and to &lt;original_name_timestamp&gt;.png. ✓
-- Automatically convert any receiving images into png type ✓
+### Completed Requirements
 
-## Homework VI
+- **Web Frontend Development** ✓
 
-- Transform both client and server parts into separate Cargo crates ✓
-- Structure the project directory to clearly separate the two parts of the application ✓
-- Identify the shared functionality and abstract into the common library ✓
-- Added `tracing` and `tracing-subscriber` crates for logging ✓
-- Added `chrono` crate for dates and time operations ✓
-- Added `anyhow` for better error handling and edding contect to errors ✓
-- Added `thiserror` crate for creating custom errors ✓
-- Added `tempfile` crate for managing temprary files and directories ✓
-- Updated the `README.md` with documentation of how to use the applications ✓
-- Added comments to the code to explain reasoning ✓
-- Added test for client, server and common library ✓
+  - Created a web frontend for server application
+  - Implemented message viewing functionality
+  - Added user-based message filtering
+  - Built using Trunk and Nginx for serving
 
-## Homework VII
+- **User and Message Management** ✓
 
-### Error Handling Improvements
+  - Implemented user deletion functionality
+  - Added message deletion capabilities
+  - Integrated user-message relationship management
+  - Ensured proper data cleanup on user deletion
 
-- Enhanced error handling using `anyhow` and `thiserror` crates ✓
-  - Custom error types for specific failure scenarios
-  - Detailed error context and chain tracking
-  - Better error messages for debugging
-- Implemented comprehensive server-side error handling ✓
-  - Graceful handling of connection failures
-  - Detailed logging of error conditions
-- Added client-side error management ✓
-  - New message types for Error and System notifications
-  - User-friendly error messages
+- **Web Framework Selection** ✓
 
-### Code Structure Improvements
+  - Chose Yew for frontend development
+  - Integrated with existing async server backend
+  - Ensured seamless communication between frontend and backend
 
-- Refactored server architecture ✓
-  - Split into logical modules (connection, message handling, state management)
-  - Improved separation of concerns
-  - Better resource management
-- Reorganized client codebase ✓
-  - Modular command processing
-  - Separate UI and network layers
-  - Cleaner message handling logic
+- **Backend Integration** ✓
 
-### Testing Enhancements
+  - Successfully integrated frontend with async server
+  - Implemented efficient data fetching and display
+  - Ensured real-time updates and data consistency
 
-- Expanded test coverage ✓
-  - Unit tests for core functionality
-  - Integration tests for client-server communication
-  - Error handling test cases
-
-## Homework VIII
-
-### Asynchronous Rewriting Using Tokio
-
-- Refactored both client and server side to use `tokio` ✓
-- All I/O operations, network communications and other tasks are handled by Tokio ✓
-
-### Database Integration
-
-- Added Postgres db using `diesel` database framework ✓
-- Chat messages are now stored in db ✓
-- Setup migration for the db ✓
-
-### User Authentication
-
-- Added `.login` command for user identification and authentication ✓
-- Pre-configured test users available for testing ✓
-- Secure password hashing using bcrypt ✓
-
-### Security Considerations
-
-- Added encryption service to encrypt user messages, files and images ✓
-- Secure password storage with bcrypt hashing ✓
-- Database connection security ✓
-
-### Refactoring
-
-- Both client and server were refactored extensively and code is now better organized ✓
-- Docker Compose setup for easy server and database deployment ✓
-
-## Homework IX
-
-### Documentation Improvements
-
-- Added comprehensive doc-comments to key functions and modules ✓
-  - Clear and concise descriptions of functionality
-  - Documented complex and non-obvious components
-  - Enhanced code readability and maintainability
-
-### Testing Enhancements
-
-- Implemented strategic test coverage ✓
-  - Added unit tests for critical functions
-  - Utilized Rust's built-in testing framework
-
-### Testing Philosophy
-
-- Focused on testing crucial components ✓
-  - Prioritized testing of complex logic
-  - Demonstrated understanding of Rust testing principles
-  - Balanced coverage with practical considerations
+- **Interface Design** ✓
+  - Created intuitive and user-friendly interface
+  - Implemented clean and navigable layout  
 
 ## Overview
 
-This project consists of a chat server and client implemented in Rust. The server can handle multiple clients simultaneously, allowing them to send text messages, files, and images to each other. The client can connect to the server, send messages, and receive messages from other clients.
+This project consists of a chat server and client implemented in Rust. The server can handle multiple clients simultaneously, allowing them to send text messages, files, and images to each other. The client can connect to the server, send messages, and receive messages from other clients. Additionally, a web frontend is provided for administrative purposes, allowing management of users and messages.
 
 ## Features
 
@@ -125,12 +44,16 @@ This project consists of a chat server and client implemented in Rust. The serve
 - **Message types**: Clients can send text messages, files, and images.
 - **File and image handling**: Received files and images are saved in designated directories.
 - **Command recognition**: The client recognizes special commands like `.file`, `.image`, and `.quit`.
+- **Web Administration**: A web frontend for managing users and messages.
+  - User management (view, delete)
+  - Message management (view, filter, delete)
+  - Message filtering by user
 
 ## Usage
 
-### Server and Database Setup
+### Server, Database, and Frontend Setup
 
-The server and database are now managed using Docker Compose. To start them:
+The server, database, and web frontend are managed using Docker Compose. To start them:
 
 1. Make sure you have Docker and Docker Compose installed
 2. Navigate to the project root directory
@@ -140,13 +63,26 @@ The server and database are now managed using Docker Compose. To start them:
 docker compose up -d
 ```
 
-This will start both the chat server and PostgreSQL database in containers.
+This will start:
+
+- The chat server
+- PostgreSQL database
+- Web frontend (accessible at http://localhost:80)
 
 ### Client
 
 To start the client, run the following command:
 
 `cargo run --bin chat-client`
+
+### Web Frontend
+
+The web frontend provides an administrative interface accessible at http://localhost:80. Features include:
+
+- Viewing all messages
+- Filtering messages by user
+- Deleting users and their associated messages
+- Managing user accounts
 
 ### Authentication
 
@@ -194,6 +130,9 @@ Available test users:
 - **tracing**: For application-level tracing and logging
 - **tracing-subscriber**: For collecting and recording tracing data
 - **Chat Common**: A shared library for message handling and file operations
+- **Frontend Dependencies**:
+  - **Trunk**: For building the web frontend
+  - **Nginx**: For serving the frontend application
 
 ## Building
 
