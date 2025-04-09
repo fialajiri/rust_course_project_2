@@ -24,7 +24,7 @@ pub async fn login(
     credentials: Json<Credentials>,
 ) -> Result<Value, Custom<Value>> {
     // Find the user by username
-    let user = UserRepository::find_by_username(&mut *db, &credentials.username)
+    let user = UserRepository::find_by_username(&mut db, &credentials.username)
         .await
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
@@ -38,7 +38,7 @@ pub async fn login(
         .map_err(|_| Custom(Status::Unauthorized, json!("Wrong credentials")))?
     {
         // Generate a token
-        let token = rand::thread_rng()
+        let token = rand::rng()
             .sample_iter(&Alphanumeric)
             .take(128)
             .map(char::from)

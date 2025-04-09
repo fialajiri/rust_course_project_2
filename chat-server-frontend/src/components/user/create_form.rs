@@ -10,7 +10,7 @@ pub struct CreateUserFormProps {
 
 #[function_component(CreateUserForm)]
 pub fn create_user_form(props: &CreateUserFormProps) -> Html {
-    let new_user = use_state(|| NewUser::default());
+    let new_user = use_state(NewUser::default);
     let submitting = use_state(|| false);
     let error = use_state(|| None::<String>);
     let success = use_state(|| false);

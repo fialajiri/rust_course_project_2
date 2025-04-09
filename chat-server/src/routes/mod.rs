@@ -5,7 +5,11 @@ use rocket::{
 };
 use rocket_db_pools::{deadpool_redis::redis::AsyncCommands, Connection};
 
-use crate::{models::user::User, repositories::user::UserRepository, utils::db_connection::{CacheConn, DbConn}};
+use crate::{
+    models::user::User,
+    repositories::user::UserRepository,
+    utils::db_connection::{CacheConn, DbConn},
+};
 
 pub mod authorization;
 pub mod messages;

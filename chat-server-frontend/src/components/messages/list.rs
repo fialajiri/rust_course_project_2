@@ -6,9 +6,9 @@ use yew::prelude::*;
 
 #[function_component(MessagesList)]
 pub fn messages_list() -> Html {
-    let messages = use_state(|| vec![]);
-    let users = use_state(|| vec![]);
-    let filtered_messages = use_state(|| vec![]);
+    let messages = use_state(Vec::new);
+    let users = use_state(Vec::new);
+    let filtered_messages = use_state(Vec::new);
     let error = use_state(|| None::<String>);
     let loading = use_state(|| true);
 
@@ -76,8 +76,7 @@ pub fn messages_list() -> Html {
         Callback::from(move |message_id: i32| {
             let fetch_messages = fetch_messages.clone();
 
-            let confirm =
-                gloo_dialogs::confirm(&format!("Are you sure you want to delete this message?"));
+            let confirm = gloo_dialogs::confirm("Are you sure you want to delete this message?");
             if !confirm {
                 return;
             }

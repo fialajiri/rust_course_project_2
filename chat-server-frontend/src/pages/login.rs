@@ -12,9 +12,9 @@ const API_BASE_URL: &str = "http://127.0.0.1:8001";
 
 #[function_component(LoginPage)]
 pub fn login_page() -> Html {
-    let username = use_state(|| String::new());
-    let password = use_state(|| String::new());
-    let error = use_state(|| String::new());
+    let username = use_state(String::new);
+    let password = use_state(String::new);
+    let error = use_state(String::new);
     let navigator = use_navigator().unwrap();
 
     let username_changed = {
@@ -51,7 +51,7 @@ pub fn login_page() -> Html {
             spawn_local(async move {
                 let client = reqwest::Client::new();
                 match client
-                    .post(&format!("{}/auth/login", API_BASE_URL))
+                    .post(format!("{}/auth/login", API_BASE_URL))
                     .json(&json!({
                         "username": username,
                         "password": password,

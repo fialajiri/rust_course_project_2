@@ -6,7 +6,7 @@ use yew::prelude::*;
 
 #[function_component(UsersList)]
 pub fn users_list() -> Html {
-    let users = use_state(|| vec![]);
+    let users = use_state(Vec::new);
     let error = use_state(|| None::<String>);
     let loading = use_state(|| true);
     let show_create_form = use_state(|| false);
@@ -51,7 +51,7 @@ pub fn users_list() -> Html {
             let fetch_users = fetch_users.clone();
 
             let confirm =
-                gloo_dialogs::confirm(&format!("Are you sure you want to delete this user?"));
+                gloo_dialogs::confirm("Are you sure you want to delete this user?");
             if !confirm {
                 return;
             }

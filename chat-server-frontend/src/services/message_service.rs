@@ -29,13 +29,13 @@ impl MessageService {
                     if response.ok() {
                         match response.json::<Vec<Message>>().await {
                             Ok(data) => Ok(data),
-                            Err(e) => Err(FetchError::DeserializeError(e.to_string())),
+                            Err(e) => Err(FetchError::Deserialize(e.to_string())),
                         }
                     } else {
-                        Err(FetchError::StatusError(response.status()))
+                        Err(FetchError::Status(response.status()))
                     }
                 }
-                Err(e) => Err(FetchError::RequestError(e.to_string())),
+                Err(e) => Err(FetchError::Request(e.to_string())),
             };
             callback.emit(result);
         });
@@ -54,10 +54,10 @@ impl MessageService {
                     if response.ok() {
                         Ok(())
                     } else {
-                        Err(FetchError::StatusError(response.status()))
+                        Err(FetchError::Status(response.status()))
                     }
                 }
-                Err(e) => Err(FetchError::RequestError(e.to_string())),
+                Err(e) => Err(FetchError::Request(e.to_string())),
             };
             callback.emit(result);
         });
@@ -77,10 +77,10 @@ impl MessageService {
                     if response.ok() {
                         Ok(())
                     } else {
-                        Err(FetchError::StatusError(response.status()))
+                        Err(FetchError::Status(response.status()))
                     }
                 }
-                Err(e) => Err(FetchError::RequestError(e.to_string())),
+                Err(e) => Err(FetchError::Request(e.to_string())),
             };
             callback.emit(result);
         });
