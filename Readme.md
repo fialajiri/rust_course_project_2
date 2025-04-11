@@ -32,7 +32,35 @@
 
 - **Interface Design** ✓
   - Created intuitive and user-friendly interface
-  - Implemented clean and navigable layout  
+  - Implemented clean and navigable layout
+
+## Homework XI
+
+### Completed Requirements
+
+- **Prometheus Integration** ✓
+
+  - Added Prometheus to the chat application's server
+  - Configured Prometheus to gather metrics from the server
+  - Set up proper Docker networking for service discovery
+
+- **Metrics Implementation** ✓
+
+  - Implemented message counter metric using Prometheus
+  - Added active connections gauge for monitoring server load
+  - Ensured thread-safe metric updates using Arc<Mutex>
+
+- **Metrics Endpoint** ✓
+
+  - Created `/metrics` endpoint for Prometheus scraping
+  - Implemented proper Prometheus exposition format
+  - Added metric documentation and type definitions
+
+- **Monitoring Setup** ✓
+
+  - Integrated Grafana for metrics visualization
+  - Created custom dashboard for chat metrics
+  - Set up proper service dependencies in Docker Compose
 
 ## Overview
 
@@ -48,6 +76,11 @@ This project consists of a chat server and client implemented in Rust. The serve
   - User management (view, delete)
   - Message management (view, filter, delete)
   - Message filtering by user
+- **Monitoring and Metrics**:
+  - Real-time message counting
+  - Active connection monitoring
+  - Prometheus metrics scraping
+  - Grafana dashboard visualization
 
 ## Usage
 
@@ -68,6 +101,33 @@ This will start:
 - The chat server
 - PostgreSQL database
 - Web frontend (accessible at http://localhost:80)
+- Prometheus (accessible at http://localhost:9090)
+- Grafana (accessible at http://localhost:3000)
+
+### Monitoring Setup
+
+#### Prometheus
+
+- Access the Prometheus UI at http://localhost:9090
+- View metrics under the "Graph" tab
+- Check target status under "Status" > "Targets"
+- Example queries:
+  - `chat_messages_sent_total` - Total messages sent
+  - `chat_active_connections` - Current active connections
+  - `rate(chat_messages_sent_total[5m])` - Message rate
+
+#### Grafana
+
+- Access Grafana at http://localhost:3000
+- Default credentials:
+  - Username: `admin`
+  - Password: `admin`
+- Add Prometheus as a data source:
+  - URL: `http://prometheus:9090`
+- Create dashboards to visualize:
+  - Message throughput
+  - Active connections
+  - Server health metrics
 
 ### Client
 
@@ -129,10 +189,14 @@ Available test users:
 - **tokio**: For asynchronous runtime and networking
 - **tracing**: For application-level tracing and logging
 - **tracing-subscriber**: For collecting and recording tracing data
+- **prometheus**: For metrics collection and exposition
 - **Chat Common**: A shared library for message handling and file operations
 - **Frontend Dependencies**:
   - **Trunk**: For building the web frontend
   - **Nginx**: For serving the frontend application
+- **Monitoring Dependencies**:
+  - **Prometheus**: For metrics collection
+  - **Grafana**: For metrics visualization
 
 ## Building
 

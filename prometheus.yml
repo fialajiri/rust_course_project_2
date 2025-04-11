@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'chat-server'
+    static_configs:
+      - targets: ['server:8001']  # Using the service name from docker-compose.yml
+    metrics_path: '/metrics'
+    scheme: 'http' 
