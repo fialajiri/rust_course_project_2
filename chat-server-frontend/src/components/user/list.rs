@@ -50,8 +50,7 @@ pub fn users_list() -> Html {
         Callback::from(move |user_id: i32| {
             let fetch_users = fetch_users.clone();
 
-            let confirm =
-                gloo_dialogs::confirm("Are you sure you want to delete this user?");
+            let confirm = gloo_dialogs::confirm("Are you sure you want to delete this user?");
             if !confirm {
                 return;
             }

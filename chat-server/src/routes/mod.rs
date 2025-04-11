@@ -13,8 +13,8 @@ use crate::{
 
 pub mod authorization;
 pub mod messages;
-pub mod users;
 pub mod metrics;
+pub mod users;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
