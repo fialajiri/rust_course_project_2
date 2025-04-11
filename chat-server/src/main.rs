@@ -2,11 +2,13 @@ use anyhow::{Context, Result as AnyhowResult};
 use chat_common::error::ChatError;
 use chat_server::routes::authorization;
 use chat_server::routes::messages;
+use chat_server::routes::metrics;
 use chat_server::routes::users;
 use chat_server::services::client_service::ClientService;
 use chat_server::utils::cors::Cors;
 use chat_server::utils::db_connection::CacheConn;
 use chat_server::utils::db_connection::{self, DbConn};
+use chat_server::utils::metrics::Metrics;
 use rocket_db_pools::Database;
 use std::collections::HashMap;
 use std::env;
@@ -20,6 +22,10 @@ const DEFAULT_TCP_PORT: &str = "8080";
 #[tokio::main]
 async fn main() -> AnyhowResult<()> {
     tracing_subscriber::fmt::init();
+
+    // Initialize metrics
+    let metrics = Metrics::new();
+    let metrics_for_rocket = metrics.clone();
 
     // Initialize database pool for the TCP server
     let pool = db_connection::create_pool().await?;
@@ -38,7 +44,7 @@ async fn main() -> AnyhowResult<()> {
 
     // Initialize client handler
     let clients = Arc::new(Mutex::new(HashMap::new()));
-    let client_handler = ClientService::new(clients, pool.clone())?;
+    let client_handler = ClientService::new(clients, pool.clone(), metrics.clone())?;
 
     // Start Rocket server in a separate task
     tokio::spawn(async move {
@@ -46,9 +52,11 @@ async fn main() -> AnyhowResult<()> {
             .attach(DbConn::init())
             .attach(CacheConn::init())
             .attach(Cors)
+            .manage(metrics_for_rocket)
             .mount("/users", users::routes())
             .mount("/messages", messages::routes())
             .mount("/auth", authorization::routes())
+            .mount("/", metrics::routes())
             .launch()
             .await
             .expect("Failed to launch Rocket server");
@@ -60,6 +68,9 @@ async fn main() -> AnyhowResult<()> {
         match listener.accept().await {
             Ok((stream, addr)) => {
                 info!("New TCP connection from: {}", addr);
+                // Increment active connections
+                metrics.lock().await.active_connections.inc();
+
                 if let Err(e) = client_handler.handle_new_client(stream).await {
                     error!(
                         "Failed to handle client: {} (code: {:?})",

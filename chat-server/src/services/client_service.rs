@@ -9,12 +9,14 @@
 use crate::services::connection_service::ConnectionService;
 use crate::types::{AuthState, ChatRoomConnection, Clients};
 use crate::utils::db_connection::DbPool;
+use crate::utils::metrics::Metrics;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chat_common::encryption::EncryptionService;
 use chat_common::error::Result;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpStream;
+use tokio::sync::Mutex;
 use tracing::{error, info};
 
 /// Service responsible for managing client connections in the chat server.
@@ -33,6 +35,7 @@ pub struct ClientService {
     pool: Arc<DbPool>,
     /// Shared encryption service for secure communication
     encryption: Arc<EncryptionService>,
+    metrics: Arc<Mutex<Metrics>>,
 }
 
 impl ClientService {
@@ -41,6 +44,7 @@ impl ClientService {
     /// # Arguments
     /// * `clients` - Shared map of all connected clients
     /// * `pool` - Shared database connection pool
+    /// * `metrics` - Shared metrics for monitoring
     ///
     /// # Returns
     /// * `Result<Self>` - The new ClientService instance or an error if initialization fails
@@ -49,7 +53,7 @@ impl ClientService {
     /// * If ENCRYPTION_KEY environment variable is not set
     /// * If ENCRYPTION_KEY is not valid base64
     /// * If decoded ENCRYPTION_KEY is not exactly 32 bytes
-    pub fn new(clients: Clients, pool: Arc<DbPool>) -> Result<Self> {
+    pub fn new(clients: Clients, pool: Arc<DbPool>, metrics: Arc<Mutex<Metrics>>) -> Result<Self> {
         let key = std::env::var("ENCRYPTION_KEY")
             .expect("ENCRYPTION_KEY environment variable must be set");
 
@@ -66,6 +70,7 @@ impl ClientService {
             next_id: AtomicUsize::new(1),
             pool,
             encryption: Arc::new(EncryptionService::new(&key_bytes)?),
+            metrics,
         })
     }
 
@@ -85,6 +90,7 @@ impl ClientService {
         let addr = stream.peer_addr()?;
         let clients = Arc::clone(&self.clients);
         let pool = Arc::clone(&self.pool);
+        let metrics = self.metrics.clone();
 
         let (read_half, write_half) = stream.into_split();
 
@@ -104,7 +110,7 @@ impl ClientService {
         info!("New client connected: {} with ID: {}", addr, client_id);
 
         let mut connection_service =
-            ConnectionService::new(Arc::clone(&clients), pool, Arc::clone(&self.encryption));
+            ConnectionService::new(clients, pool, Arc::clone(&self.encryption), metrics);
 
         tokio::spawn(async move {
             if let Err(e) = connection_service

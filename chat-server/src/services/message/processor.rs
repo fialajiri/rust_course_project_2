@@ -9,12 +9,14 @@ use crate::models::message::{MessageType, NewMessage};
 use crate::services::auth::AuthService;
 use crate::types::{AuthState, Clients};
 use crate::utils::db_connection::DbPool;
+use crate::utils::metrics::Metrics;
 use anyhow::Result;
 use chat_common::async_message_stream::AsyncMessageStream;
 use chat_common::encryption::EncryptionService;
 use chat_common::{ErrorCode, Message};
 use diesel_async::RunQueryDsl;
 use tokio::net::tcp::OwnedReadHalf;
+use tokio::sync::Mutex;
 use tracing::{error, info};
 
 use super::broadcast::MessageBroadcaster;
@@ -27,6 +29,7 @@ pub(super) struct MessageProcessor {
     clients: Clients,
     pool: Arc<DbPool>,
     encryption: Arc<EncryptionService>,
+    metrics: Arc<Mutex<Metrics>>,
 }
 
 impl MessageProcessor {
@@ -36,11 +39,18 @@ impl MessageProcessor {
     /// * `clients` - A shared collection of connected clients
     /// * `pool` - A shared database connection pool
     /// * `encryption` - A shared encryption service for secure communication
-    pub fn new(clients: Clients, pool: Arc<DbPool>, encryption: Arc<EncryptionService>) -> Self {
+    /// * `metrics` - A shared metrics service for tracking message processing
+    pub fn new(
+        clients: Clients,
+        pool: Arc<DbPool>,
+        encryption: Arc<EncryptionService>,
+        metrics: Arc<Mutex<Metrics>>,
+    ) -> Self {
         Self {
             clients,
             pool,
             encryption,
+            metrics,
         }
     }
 
@@ -81,6 +91,9 @@ impl MessageProcessor {
 
         // Save message to database
         self.save_message_to_db(message, user_id).await?;
+
+        // Increment message counter
+        self.metrics.lock().await.messages_sent.inc();
 
         // First send acknowledgment to the sender
         self.send_acknowledgment(client_id, message).await?;

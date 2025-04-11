@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::types::Clients;
 use crate::utils::db_connection::DbPool;
+use crate::utils::metrics::Metrics;
 use anyhow::Result;
 use chat_common::async_message_stream::AsyncMessageStream;
 use chat_common::encryption::file::EncryptedFileMetadata;
@@ -16,6 +17,7 @@ use chat_common::encryption::EncryptionService;
 use chat_common::Message;
 use tokio::io::BufReader;
 use tokio::net::tcp::OwnedReadHalf;
+use tokio::sync::Mutex;
 use tracing::{info, warn};
 
 use super::processor::MessageProcessor;
@@ -29,6 +31,7 @@ pub struct MessageService {
     clients: Clients,
     pool: Arc<DbPool>,
     encryption: Arc<EncryptionService>,
+    metrics: Arc<Mutex<Metrics>>,
 }
 
 impl MessageService {
@@ -38,11 +41,18 @@ impl MessageService {
     /// * `clients` - A shared collection of connected clients
     /// * `pool` - A shared database connection pool
     /// * `encryption` - A shared encryption service for secure communication
-    pub fn new(clients: Clients, pool: Arc<DbPool>, encryption: Arc<EncryptionService>) -> Self {
+    /// * `metrics` - A shared metrics service for tracking message processing
+    pub fn new(
+        clients: Clients,
+        pool: Arc<DbPool>,
+        encryption: Arc<EncryptionService>,
+        metrics: Arc<Mutex<Metrics>>,
+    ) -> Self {
         Self {
             clients,
             pool,
             encryption,
+            metrics,
         }
     }
 
@@ -65,6 +75,7 @@ impl MessageService {
             self.clients.clone(),
             Arc::clone(&self.pool),
             Arc::clone(&self.encryption),
+            self.metrics.clone(),
         );
         processor.process(stream, client_id, message).await
     }
@@ -79,6 +90,9 @@ impl MessageService {
     pub async fn handle_disconnect(&self, client_id: usize) -> Result<()> {
         let mut clients = self.clients.lock().await;
         clients.remove(&client_id);
+
+        // Decrement active connections
+        self.metrics.lock().await.active_connections.dec();
 
         // TODO: get the username of the disconnected client
         let disconnect_msg = Message::System("A client has disconnected".to_string());
@@ -214,7 +228,7 @@ mod tests {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    async fn setup_test_services() -> (Arc<DbPool>, Arc<EncryptionService>) {
+    async fn setup_test_services() -> (Arc<DbPool>, Arc<EncryptionService>, Arc<Mutex<Metrics>>) {
         // Create a test encryption service with a test key
         let key = [0u8; 32]; // Test key (all zeros)
         let encryption = Arc::new(EncryptionService::new(&key).unwrap());
@@ -226,16 +240,18 @@ mod tests {
         let pool = Pool::builder(config).max_size(1).build().unwrap();
         let pool = Arc::new(pool);
 
-        (pool, encryption)
+        let metrics = Metrics::new();
+
+        (pool, encryption, metrics)
     }
 
     #[tokio::test]
     async fn test_handle_text_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
         let encryption_clone = Arc::clone(&encryption);
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
 
         // Create an encrypted message
         let encrypted = encryption_clone.message().encrypt("Test message").unwrap();
@@ -249,9 +265,9 @@ mod tests {
     #[tokio::test]
     async fn test_handle_system_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
         let message = Message::System("System notification".to_string());
 
         let result = service.handle_message(message).await;
@@ -261,9 +277,9 @@ mod tests {
     #[tokio::test]
     async fn test_handle_auth_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
         let message = Message::Auth {
             username: "test".to_string(),
             password: "test".to_string(),
@@ -276,10 +292,10 @@ mod tests {
     #[tokio::test]
     async fn test_handle_file_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
         let encryption_clone = Arc::clone(&encryption);
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
 
         // Create test data and encrypt it
         let test_data = vec![1, 2, 3, 4, 5];
@@ -303,10 +319,10 @@ mod tests {
     #[tokio::test]
     async fn test_handle_image_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
         let encryption_clone = Arc::clone(&encryption);
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
 
         // Create test data and encrypt it
         let test_data = vec![1, 2, 3, 4, 5];
@@ -330,9 +346,9 @@ mod tests {
     #[tokio::test]
     async fn test_handle_error_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
         let message = Message::Error {
             code: chat_common::ErrorCode::PermissionDenied,
             message: "Test error".to_string(),
@@ -345,9 +361,9 @@ mod tests {
     #[tokio::test]
     async fn test_handle_auth_response_message() {
         let clients = Arc::new(Mutex::new(HashMap::new()));
-        let (pool, encryption) = setup_test_services().await;
+        let (pool, encryption, metrics) = setup_test_services().await;
 
-        let service = MessageService::new(clients, pool, encryption);
+        let service = MessageService::new(clients, pool, encryption, metrics);
         let message = Message::AuthResponse {
             success: true,
             token: Some("test_token".to_string()),

@@ -1,9 +1,11 @@
 use crate::types::Clients;
 use crate::utils::db_connection::DbPool;
+use crate::utils::metrics::Metrics;
 use anyhow::Result;
 use chat_common::async_message_stream::AsyncMessageStream;
 use std::sync::Arc;
 use tokio::net::tcp::OwnedReadHalf;
+use tokio::sync::Mutex;
 use tracing::error;
 
 use super::message::handler::MessageService;
@@ -13,14 +15,21 @@ pub struct ConnectionService {
     clients: Clients,
     pool: Arc<DbPool>,
     encryption: Arc<EncryptionService>,
+    metrics: Arc<Mutex<Metrics>>,
 }
 
 impl ConnectionService {
-    pub fn new(clients: Clients, pool: Arc<DbPool>, encryption: Arc<EncryptionService>) -> Self {
+    pub fn new(
+        clients: Clients,
+        pool: Arc<DbPool>,
+        encryption: Arc<EncryptionService>,
+        metrics: Arc<Mutex<Metrics>>,
+    ) -> Self {
         Self {
             clients,
             pool,
             encryption,
+            metrics,
         }
     }
 
@@ -34,6 +43,7 @@ impl ConnectionService {
             self.clients.clone(),
             Arc::clone(&self.pool),
             Arc::clone(&self.encryption),
+            self.metrics.clone(),
         );
 
         while let Ok(message) = stream.read_message().await {
